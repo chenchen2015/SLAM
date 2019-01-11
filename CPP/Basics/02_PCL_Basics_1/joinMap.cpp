@@ -8,10 +8,13 @@ using namespace std;
 #include <Eigen/Geometry>
 // Boost (string formatting)
 #include <boost/format.hpp>
+#include <boost/thread/thread.hpp>
 // PCL
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <pcl/visualization/pcl_visualizer.h>
+
+#define CV_WAIT cv::waitKey(0)
 
 // Camera intrinsics
 struct CamIntrinsics {
@@ -26,7 +29,8 @@ struct CamIntrinsics {
 using PointT = pcl::PointXYZRGB;
 using PointCloud = pcl::PointCloud<PointT>;
 
-Eigen::Isometry3d Post2Transform(double* const& pose) {
+// camera pose (extrinsics) to transformation matrix
+Eigen::Isometry3d Pose2Transform(double* const& pose) {
     // combine translation and rotation specified from pose
     // (camera extrinsics) into a transormation matrix
     // pose = [x, y, z, qx, qy, qz, qw]
@@ -38,6 +42,24 @@ Eigen::Isometry3d Post2Transform(double* const& pose) {
     // Translation
     tr.pretranslate(Eigen::Vector3d(pose[0], pose[1], pose[2]));
     return tr;
+}
+
+// rgb point cloud viewer
+boost::shared_ptr<pcl::visualization::PCLVisualizer> 
+    visualizePointCloud( PointCloud::ConstPtr cloud) {
+    // visualize point cloud
+    boost::shared_ptr<pcl::visualization::PCLVisualizer> 
+        viewer(new pcl::visualization::PCLVisualizer("Point Cloud Viewer"));
+    viewer->setBackgroundColor(0, 0, 0);
+    pcl::visualization::PointCloudColorHandlerRGBField<PointT> rgb(cloud);
+    viewer->addPointCloud<PointT> (cloud, rgb, "sample cloud"); 
+    viewer->setPointCloudRenderingProperties(
+        pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, 
+        "sample cloud"
+    ); 
+    viewer->addCoordinateSystem (1.0);
+    viewer->initCameraParameters (); 
+    return (viewer);
 }
 
 int main(int argc, char** argv) {
@@ -57,15 +79,15 @@ int main(int argc, char** argv) {
         // load color and depth images to stack
         cv::Mat colorImg =
             cv::imread((fname_fmt % "color" % (i + 1) % "png").str());
-        cv::Mat depthImg = cv::imread(
-            (fname_fmt % "depth" % (i + 1) % "pgm").str(), -1);
+        cv::Mat depthImg =
+            cv::imread((fname_fmt % "depth" % (i + 1) % "pgm").str(), -1);
         colorImgs.push_back(colorImg);
         depthImgs.push_back(depthImg);
         // load camera poses (Extrinsics)
         // and convert to transformation matrices
         double camPose[7];
         for (auto& n : camPose) fin >> n;  // x, y, z, qx, qy, qz, qw
-        poses.push_back(Post2Transform(camPose));
+        poses.push_back(Pose2Transform(camPose));
     }
 
     // create point cloud
@@ -113,10 +135,25 @@ int main(int argc, char** argv) {
             }
         }
     }
-    cout << "Processing done! Point cloud has total " 
-        << pointCloud->size() << " points" << endl;
+    cout << "Processing done! Point cloud has total " << pointCloud->size()
+         << " points" << endl;
     // write point cloud to file
     pcl::io::savePCDFileBinary("demo_map.pcd", *pointCloud);
-    
+    // visualize point cloud
+    pcl::visualization::PCLVisualizer viewer("sample cloud");
+    viewer.setBackgroundColor(0, 0, 0);
+    viewer.addPointCloud<PointT>(pointCloud, "sample cloud");
+    viewer.spinOnce();
+    viewer.setPointCloudRenderingProperties(
+        pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "sample cloud");
+    viewer.addCoordinateSystem(1.0);
+    viewer.initCameraParameters();
+    /* while (!viewer.wasStopped()) {
+        viewer.spinOnce(100);
+        boost::this_thread::sleep(boost::posix_time::microseconds(100000));
+    } */
+    // viewer.removePointCloud("Point cloud");
+    CV_WAIT;
+
     return EXIT_SUCCESS;
 }

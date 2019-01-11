@@ -15,7 +15,7 @@ include_directories( ${OpenCV_INCLUDE_DIRS} )
 find_package( Eigen3 REQUIRED )
 include_directories( ${Eigen3_INCLUDE_DIRS} )
 # PCL
-find_package( PCL REQUIRED COMPONENT common io )
+find_package( PCL REQUIRED )
 include_directories( ${PCL_INCLUDE_DIRS} )
 add_definitions( ${PCL_DEFINITIONS} )
 
