@@ -148,12 +148,7 @@ int main(int argc, char** argv) {
         pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "sample cloud");
     viewer.addCoordinateSystem(1.0);
     viewer.initCameraParameters();
-    /* while (!viewer.wasStopped()) {
-        viewer.spinOnce(100);
-        boost::this_thread::sleep(boost::posix_time::microseconds(100000));
-    } */
-    // viewer.removePointCloud("Point cloud");
-    CV_WAIT;
+    CV_WAIT;make 
 
     return EXIT_SUCCESS;
 }
