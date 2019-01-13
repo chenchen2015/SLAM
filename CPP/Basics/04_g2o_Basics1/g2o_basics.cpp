@@ -17,11 +17,11 @@ using namespace std;
 #include <opencv2/core/core.hpp>
 
 // curve function
-inline double func(const Eigen::Vector3d& abc, double x){
-    return std::exp(abc(0, 0) * _x * _x + abc(1, 0) * _x + abc(2, 0));
+inline double func(const Eigen::Vector3d &abc, double x) {
+    return std::exp(abc(0, 0) * x * x + abc(1, 0) * x + abc(2, 0));
 }
 inline double func(double a, double b, double c, double x) {
-    return std::exp(a * _x * _x + b * _x + c);
+    return std::exp(a * x * x + b * x + c);
 }
 
 // curve fitting vertex interface
@@ -41,14 +41,14 @@ class ICurveFittingVertex : public g2o::BaseVertex<3, Eigen::Vector3d> {
 
 // curve fitting edge interface
 class ICurveFittingEdge
-    : public g2o::BaseUnaryEdge<1, double, CurveFittingVertex> {
+    : public g2o::BaseUnaryEdge<1, double, ICurveFittingVertex> {
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     // constructor
-    CurveFittingEdge(double x) : BaseUnaryEdge(), _x(x) {}
+    ICurveFittingEdge(double x) : BaseUnaryEdge(), _x(x) {}
     void computeError() {
-        const CurveFittingVertex *v =
-            static_cast<const CurveFittingVertex *>(_vertices[0]);
+        const ICurveFittingVertex *v =
+            static_cast<const ICurveFittingVertex *>(_vertices[0]);
         const Eigen::Vector3d abc = v->estimate();
         _error(0, 0) = _measurement - func(abc, _x);
     }
@@ -59,8 +59,7 @@ class ICurveFittingEdge
     double _x;
 };
 
-
-int main(int argc, char** argv){
+int main(int argc, char **argv) {
     // Basic g2o example
     // solving curve fitting problem with graph
     // using nonlinear optimization methods
@@ -75,6 +74,11 @@ int main(int argc, char** argv){
     for (int i = 0; i < N; ++i) {
         double x = i / double(N);
         xData.push_back(x);
-        yData.push_back(fun(x));
+        yData.push_back(func(a, b, c, x));
     }
+    // configure g2o
+    using Block = g2o::BlockSolver<g2o::BlockSolverTraits<3, 1>>;
+    auto pLinearSolver =
+        std::make_unique<g2o::LinearSolverDense<Block::PoseMatrixType>>();
+    auto pSolver = std::make_unique<Block>(std::move(pLinearSolver));
 }
