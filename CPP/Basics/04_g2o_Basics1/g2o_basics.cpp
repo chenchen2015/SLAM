@@ -59,6 +59,9 @@ class ICurveFittingEdge
     double _x;
 };
 
+// solver type
+enum SolverTypes { Levenberg, GaussNewton, Dogleg };
+
 int main(int argc, char **argv) {
     // Basic g2o example
     // solving curve fitting problem with graph
@@ -69,6 +72,7 @@ int main(int argc, char **argv) {
     cv::RNG rng;                      // random number generator
     double abc[3] = {0, 0, 0};        // estimated parameters
     vector<double> xData, yData;      // measured data
+    const SolverTypes solverType = SolverTypes::Levenberg;
     // generate observations
     cout << "Generating observations... " << endl;
     for (int i = 0; i < N; ++i) {
@@ -81,4 +85,19 @@ int main(int argc, char **argv) {
     auto pLinearSolver =
         std::make_unique<g2o::LinearSolverDense<Block::PoseMatrixType>>();
     auto pSolver = std::make_unique<Block>(std::move(pLinearSolver));
+    std::unique_ptr<g2o::OptimizationAlgorithm> pSolverAlgo;
+    switch (solverType) {
+    case SolverTypes::Levenberg:
+        pSolverAlgo = std::make_unique<g2o::OptimizationAlgorithmLevenberg>(
+            std::move(pSolver));
+        break;
+    case SolverTypes::GaussNewton:
+        pSolverAlgo = std::make_unique<g2o::OptimizationAlgorithmGaussNewton>(
+            std::move(pSolver));
+        break;
+    case SolverTypes::Dogleg:
+        pSolverAlgo = std::make_unique<g2o::OptimizationAlgorithmDogleg>(
+            std::move(pSolver));
+        break;
+    }
 }
