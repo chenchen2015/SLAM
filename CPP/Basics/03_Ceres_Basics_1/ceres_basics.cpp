@@ -17,8 +17,7 @@ double w_sigma = 0.25;            // sigma of noise
 cv::RNG rng;                      // random number generator
 
 // Cost function
-struct CostFunction
-{
+struct CostFunction {
     // data
     const double _x, _y;
 
@@ -27,8 +26,7 @@ struct CostFunction
 
     // residual
     template <typename T>
-    bool operator()(const T *const abc, T *residual) const
-    {
+    bool operator()(const T *const abc, T *residual) const {
         // example nonlinear function
         // y = exp(ax^2 + bx + c) + w
         // where w ~ N(0, sigma) is the additive noise
@@ -44,28 +42,22 @@ using CeresAutoDiffCostFunction =
 
 // Curve function
 inline double fun(double x) {
-    return exp(a 
-    
-    
-    *x * x + b * x + c) + rng.gaussian(w_sigma);
+    return exp(a * x * x + b * x + c) + rng.gaussian(w_sigma);
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     double abc[3] = {0, 0, 0};   // estimated parameters
     vector<double> xData, yData; // measured data
     // generate observations
     cout << "Generating observations... " << endl;
-    for (int i = 0; i < N; ++i)
-    {
+    for (int i = 0; i < N; ++i) {
         double x = i / double(N);
         xData.push_back(x);
         yData.push_back(fun(x));
     }
     // configure ceres to solve nonlinear least squares problem
     ceres::Problem problem;
-    for (int i = 0; i < N; ++i)
-    {
+    for (int i = 0; i < N; ++i) {
         problem.AddResidualBlock(
             new CeresAutoDiffCostFunction(new CostFunction(xData[i], yData[i])),
             nullptr, // kernel function, not used
