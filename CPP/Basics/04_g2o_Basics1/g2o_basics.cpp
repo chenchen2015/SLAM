@@ -1,7 +1,6 @@
 #include <chrono>
 #include <cmath>
 #include <iostream>
-#include <memory>
 using namespace std;
 using ClockT = chrono::high_resolution_clock;
 using DurationMS = chrono::duration<double, std::milli>;
@@ -26,7 +25,8 @@ inline double func(double a, double b, double c, double x) {
     return std::exp(a * x * x + b * x + c);
 }
 
-// curve fitting vertex interface
+// curve fitting vertex
+// <optimization dimension, data type>
 class CurveFittingVertex : public g2o::BaseVertex<3, Eigen::Vector3d> {
   public:
     // hack to align memory for efficiency
@@ -41,7 +41,8 @@ class CurveFittingVertex : public g2o::BaseVertex<3, Eigen::Vector3d> {
     virtual bool write(ostream &out) const {}
 };
 
-// curve fitting edge interface
+// curve fitting edge
+// <observation dimension, data type, vertex type>
 class CurveFittingEdge
     : public g2o::BaseUnaryEdge<1, double, CurveFittingVertex> {
   public:
@@ -86,8 +87,8 @@ int main(int argc, char **argv) {
     // configure g2o
     using Block = g2o::BlockSolver<g2o::BlockSolverTraits<3, 1>>;
     auto pLinearSolver =
-        std::make_unique<g2o::LinearSolverDense<Block::PoseMatrixType>>();
-    auto pSolver = std::make_unique<Block>(std::move(pLinearSolver));
+        g2o::make_unique<g2o::LinearSolverDense<Block::PoseMatrixType>>();
+    auto pSolver = g2o::make_unique<Block>(std::move(pLinearSolver));
     g2o::OptimizationAlgorithmLevenberg *pSolverAlgo =
         new g2o::OptimizationAlgorithmLevenberg(std::move(pSolver));
     // std::unique_ptr<g2o::OptimizationAlgorithm> pSolverAlgo;
@@ -112,19 +113,19 @@ int main(int argc, char **argv) {
     optimizer.setAlgorithm(pSolverAlgo);
     optimizer.setVerbose(true);
     // configure graph
-    auto pVert = std::make_unique<CurveFittingVertex>();
+    auto pVert = g2o::make_unique<CurveFittingVertex>();
     pVert->setEstimate(Eigen::Vector3d(0, 0, 0)); // initial guess
     pVert->setId(0);
     optimizer.addVertex(pVert.get());
     // add edges
     for (int i = 0; i < N; ++i) {
-        auto pEdge = std::make_unique<CurveFittingEdge>(xData[i]);
+        CurveFittingEdge* pEdge = new CurveFittingEdge(xData[i]);
         pEdge->setId(i);
         pEdge->setVertex(0, pVert.get());
         pEdge->setMeasurement(yData[i]);
         pEdge->setInformation(Eigen::Matrix<double, 1, 1>::Identity() * 1.0f /
                               (wSigma * wSigma));
-        optimizer.addEdge(pEdge.release());
+        optimizer.addEdge(pEdge);
     }
     // start optimiztion
     auto t0 = ClockT::now();

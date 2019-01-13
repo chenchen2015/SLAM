@@ -3,7 +3,7 @@ project( g2o_basics1 )
 
 ## configure build
 set( CMAKE_BUILD_TYPE Release )
-add_compile_options(-std=c++14)
+add_compile_options(-std=c++11)
 # Optimization flag, (low) O1 -> O3 (high)
 set( CMAKE_CXX_FLAGS_RELEASE "-O3" )
 # generate compile commands for YCM
