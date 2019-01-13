@@ -3,6 +3,8 @@
 #include <iostream>
 #include <memory>
 using namespace std;
+using ClockT = chrono::high_resolution_clock;
+using DurationMS = chrono::duration<double, std::milli>;
 // Eigen
 #include <eigen3/Eigen/Core>
 // g2o
@@ -25,7 +27,7 @@ inline double func(double a, double b, double c, double x) {
 }
 
 // curve fitting vertex interface
-class ICurveFittingVertex : public g2o::BaseVertex<3, Eigen::Vector3d> {
+class CurveFittingVertex : public g2o::BaseVertex<3, Eigen::Vector3d> {
   public:
     // hack to align memory for efficiency
     // http://eigen.tuxfamily.org/dox-devel/group__TopicStructHavingEigenMembers.html
@@ -40,15 +42,15 @@ class ICurveFittingVertex : public g2o::BaseVertex<3, Eigen::Vector3d> {
 };
 
 // curve fitting edge interface
-class ICurveFittingEdge
-    : public g2o::BaseUnaryEdge<1, double, ICurveFittingVertex> {
+class CurveFittingEdge
+    : public g2o::BaseUnaryEdge<1, double, CurveFittingVertex> {
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     // constructor
-    ICurveFittingEdge(double x) : BaseUnaryEdge(), _x(x) {}
+    CurveFittingEdge(double x) : BaseUnaryEdge(), _x(x) {}
     void computeError() {
-        const ICurveFittingVertex *v =
-            static_cast<const ICurveFittingVertex *>(_vertices[0]);
+        const CurveFittingVertex *v =
+            static_cast<const CurveFittingVertex *>(_vertices[0]);
         const Eigen::Vector3d abc = v->estimate();
         _error(0, 0) = _measurement - func(abc, _x);
     }
@@ -68,7 +70,8 @@ int main(int argc, char **argv) {
     // using nonlinear optimization methods
     double a = 1.0, b = 2.0, c = 1.0; // parameters
     int N = 200;                      // number of points
-    double w_sigma = 0.25;            // sigma of noise
+    int nIter = 100;                  // number of iterations of the solver
+    double wSigma = 0.25;             // sigma of noise
     cv::RNG rng;                      // random number generator
     double abc[3] = {0, 0, 0};        // estimated parameters
     vector<double> xData, yData;      // measured data
@@ -78,26 +81,59 @@ int main(int argc, char **argv) {
     for (int i = 0; i < N; ++i) {
         double x = i / double(N);
         xData.push_back(x);
-        yData.push_back(func(a, b, c, x));
+        yData.push_back(func(a, b, c, x) + rng.gaussian(wSigma));
     }
     // configure g2o
     using Block = g2o::BlockSolver<g2o::BlockSolverTraits<3, 1>>;
     auto pLinearSolver =
         std::make_unique<g2o::LinearSolverDense<Block::PoseMatrixType>>();
     auto pSolver = std::make_unique<Block>(std::move(pLinearSolver));
-    std::unique_ptr<g2o::OptimizationAlgorithm> pSolverAlgo;
-    switch (solverType) {
-    case SolverTypes::Levenberg:
-        pSolverAlgo = std::make_unique<g2o::OptimizationAlgorithmLevenberg>(
-            std::move(pSolver));
-        break;
-    case SolverTypes::GaussNewton:
-        pSolverAlgo = std::make_unique<g2o::OptimizationAlgorithmGaussNewton>(
-            std::move(pSolver));
-        break;
-    case SolverTypes::Dogleg:
-        pSolverAlgo = std::make_unique<g2o::OptimizationAlgorithmDogleg>(
-            std::move(pSolver));
-        break;
+    g2o::OptimizationAlgorithmLevenberg *pSolverAlgo =
+        new g2o::OptimizationAlgorithmLevenberg(std::move(pSolver));
+    // std::unique_ptr<g2o::OptimizationAlgorithm> pSolverAlgo;
+    // switch (solverType) {
+    // case SolverTypes::Levenberg:
+    //     auto pSolverAlgo =
+    //     std::make_unique<g2o::OptimizationAlgorithmLevenberg>(
+    //         std::move(pSolver));
+    //     break;
+    // case SolverTypes::GaussNewton:
+    //     auto pSolverAlgo =
+    //     std::make_unique<g2o::OptimizationAlgorithmGaussNewton>(
+    //         std::move(pSolver));
+    //     break;
+    // case SolverTypes::Dogleg:
+    //     auto pSolverAlgo =
+    //     std::make_unique<g2o::OptimizationAlgorithmDogleg>(
+    //         std::move(pSolver));
+    //     break;
+    // }
+    g2o::SparseOptimizer optimizer;
+    optimizer.setAlgorithm(pSolverAlgo);
+    optimizer.setVerbose(true);
+    // configure graph
+    auto pVert = std::make_unique<CurveFittingVertex>();
+    pVert->setEstimate(Eigen::Vector3d(0, 0, 0)); // initial guess
+    pVert->setId(0);
+    optimizer.addVertex(pVert.get());
+    // add edges
+    for (int i = 0; i < N; ++i) {
+        auto pEdge = std::make_unique<CurveFittingEdge>(xData[i]);
+        pEdge->setId(i);
+        pEdge->setVertex(0, pVert.get());
+        pEdge->setMeasurement(yData[i]);
+        pEdge->setInformation(Eigen::Matrix<double, 1, 1>::Identity() * 1.0f /
+                              (wSigma * wSigma));
+        optimizer.addEdge(pEdge.release());
     }
+    // start optimiztion
+    auto t0 = ClockT::now();
+    optimizer.initializeOptimization();
+    optimizer.optimize(100);
+    DurationMS timeUsed = ClockT::now() - t0;
+    cout << "Solver spent " << timeUsed.count() << " ms." << endl;
+    // output result
+    cout << "Estimated parameters: " << pVert->estimate().transpose() << endl;
+
+    return EXIT_SUCCESS;
 }
