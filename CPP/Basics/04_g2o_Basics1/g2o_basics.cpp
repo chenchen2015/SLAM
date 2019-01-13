@@ -58,3 +58,23 @@ class ICurveFittingEdge
   public:
     double _x;
 };
+
+
+int main(int argc, char** argv){
+    // Basic g2o example
+    // solving curve fitting problem with graph
+    // using nonlinear optimization methods
+    double a = 1.0, b = 2.0, c = 1.0; // parameters
+    int N = 200;                      // number of points
+    double w_sigma = 0.25;            // sigma of noise
+    cv::RNG rng;                      // random number generator
+    double abc[3] = {0, 0, 0};        // estimated parameters
+    vector<double> xData, yData;      // measured data
+    // generate observations
+    cout << "Generating observations... " << endl;
+    for (int i = 0; i < N; ++i) {
+        double x = i / double(N);
+        xData.push_back(x);
+        yData.push_back(fun(x));
+    }
+}
