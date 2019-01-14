@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
         31,    // size of the border where the features are not detected
         0,     // first level: level of pyramid to put source image to
         2,     // WTA_K: number of points that produce each element of the
-            // oriented BRIEF descriptor
+               // oriented BRIEF descriptor
         cv::ORB::HARRIS_SCORE,  // algorithm to rank features
         31,                     // size of the patch used by the oriented BRIEF
         20                      // fast threshold
@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
     // filter matched features based on distance
     vector<cv::DMatch> goodMatches;
     // minimum threshold to qualify as good match
-    double distThreshold = max(2*minDist, 20.0);
+    double distThreshold = max(2 * minDist, 20.0);
     for (const auto& feat : rawMatches) {
         if (feat.distance <= distThreshold) {
             goodMatches.push_back(feat);
