@@ -32,8 +32,12 @@ class CurveFittingVertex : public g2o::BaseVertex<3, Eigen::Vector3d> {
     // hack to align memory for efficiency
     // http://eigen.tuxfamily.org/dox-devel/group__TopicStructHavingEigenMembers.html
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    // implementation to reset vertices (to null state)
     virtual void setToOriginImpl() { _estimate << 0, 0, 0; }
-
+    // implementation to update vertices (states)
+    //   x[k+1]  =    x[k]   + delta_x
+    //      which is 
+    // _estimate = _estimate + update
     virtual void oplusImpl(const double *update) {
         _estimate += Eigen::Vector3d(update);
     }
@@ -49,6 +53,8 @@ class CurveFittingEdge
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     // constructor
     CurveFittingEdge(double x) : BaseUnaryEdge(), _x(x) {}
+    // compute error of the edge
+    // error = y - y_hat
     void computeError() {
         const CurveFittingVertex *v =
             static_cast<const CurveFittingVertex *>(_vertices[0]);
@@ -113,15 +119,15 @@ int main(int argc, char **argv) {
     optimizer.setAlgorithm(pSolverAlgo);
     optimizer.setVerbose(true);
     // configure graph
-    auto pVert = g2o::make_unique<CurveFittingVertex>();
+    CurveFittingVertex *pVert = new CurveFittingVertex();
     pVert->setEstimate(Eigen::Vector3d(0, 0, 0)); // initial guess
     pVert->setId(0);
-    optimizer.addVertex(pVert.get());
+    optimizer.addVertex(pVert);
     // add edges
     for (int i = 0; i < N; ++i) {
         CurveFittingEdge* pEdge = new CurveFittingEdge(xData[i]);
         pEdge->setId(i);
-        pEdge->setVertex(0, pVert.get());
+        pEdge->setVertex(0, pVert);
         pEdge->setMeasurement(yData[i]);
         pEdge->setInformation(Eigen::Matrix<double, 1, 1>::Identity() * 1.0f /
                               (wSigma * wSigma));
