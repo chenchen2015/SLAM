@@ -36,7 +36,7 @@ class CurveFittingVertex : public g2o::BaseVertex<3, Eigen::Vector3d> {
     virtual void setToOriginImpl() { _estimate << 0, 0, 0; }
     // implementation to update vertices (states)
     //   x[k+1]  =    x[k]   + delta_x
-    //      which is 
+    //      which is
     // _estimate = _estimate + update
     virtual void oplusImpl(const double *update) {
         _estimate += Eigen::Vector3d(update);
@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
     cv::RNG rng;                      // random number generator
     double abc[3] = {0, 0, 0};        // estimated parameters
     vector<double> xData, yData;      // measured data
-    const SolverTypes solverType = SolverTypes::Levenberg;
+    constexpr SolverTypes solverType = SolverTypes::Levenberg;
     // generate observations
     cout << "Generating observations... " << endl;
     for (int i = 0; i < N; ++i) {
@@ -95,37 +95,34 @@ int main(int argc, char **argv) {
     auto pLinearSolver =
         g2o::make_unique<g2o::LinearSolverDense<Block::PoseMatrixType>>();
     auto pSolver = g2o::make_unique<Block>(std::move(pLinearSolver));
-    g2o::OptimizationAlgorithmLevenberg *pSolverAlgo =
-        new g2o::OptimizationAlgorithmLevenberg(std::move(pSolver));
-    // std::unique_ptr<g2o::OptimizationAlgorithm> pSolverAlgo;
-    // switch (solverType) {
-    // case SolverTypes::Levenberg:
-    //     auto pSolverAlgo =
-    //     std::make_unique<g2o::OptimizationAlgorithmLevenberg>(
-    //         std::move(pSolver));
-    //     break;
-    // case SolverTypes::GaussNewton:
-    //     auto pSolverAlgo =
-    //     std::make_unique<g2o::OptimizationAlgorithmGaussNewton>(
-    //         std::move(pSolver));
-    //     break;
-    // case SolverTypes::Dogleg:
-    //     auto pSolverAlgo =
-    //     std::make_unique<g2o::OptimizationAlgorithmDogleg>(
-    //         std::move(pSolver));
-    //     break;
-    // }
+    cout << "Using optimization algorithm: ";
+    g2o::OptimizationAlgorithm *pSolverAlgo;
+    switch (solverType) {
+    case SolverTypes::Levenberg:
+        cout << "Levenberg" << endl;
+        pSolverAlgo = new g2o::OptimizationAlgorithmLevenberg(std::move(pSolver));
+        break;
+    case SolverTypes::GaussNewton:
+        cout << "Gauss-Newton" << endl;
+        pSolverAlgo = new g2o::OptimizationAlgorithmGaussNewton(std::move(pSolver));
+        break;
+    case SolverTypes::Dogleg:
+        cout << "Dogleg" << endl;
+        pSolverAlgo = new g2o::OptimizationAlgorithmDogleg(std::move(pSolver));
+        break;
+    }
     g2o::SparseOptimizer optimizer;
     optimizer.setAlgorithm(pSolverAlgo);
-    optimizer.setVerbose(true);
+    optimizer.setVerbose(false);
     // configure graph
     CurveFittingVertex *pVert = new CurveFittingVertex();
     pVert->setEstimate(Eigen::Vector3d(0, 0, 0)); // initial guess
     pVert->setId(0);
     optimizer.addVertex(pVert);
     // add edges
+    // all edges connect to the save vertex
     for (int i = 0; i < N; ++i) {
-        CurveFittingEdge* pEdge = new CurveFittingEdge(xData[i]);
+        CurveFittingEdge *pEdge = new CurveFittingEdge(xData[i]);
         pEdge->setId(i);
         pEdge->setVertex(0, pVert);
         pEdge->setMeasurement(yData[i]);
