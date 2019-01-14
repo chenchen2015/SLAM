@@ -2,15 +2,17 @@
 #include <iostream>
 #include <string>
 using namespace std;
+using sClock = chrono::high_resolution_clock;
+using DurationMS = chrono::duration<double, std::milli>;
 // OpenCV
 #include <opencv2/core/core.hpp>
+#include <opencv2/features2d/features2d.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
 #define CV_WAIT cv::waitKey(0)
 constexpr char cCvWindow[] = "OpenCV Basics";
 constexpr char fileName[] = "../test.jpg";
 enum SLAM_ERROR { ERR_FILE_NOT_EXIST = -1, ERR_FORMAT_NOT_SUPPORTED = -2 };
-using sClock = chrono::high_resolution_clock;
 
 int main(int argc, char **argv) {
     cv::Mat image;
@@ -23,7 +25,7 @@ int main(int argc, char **argv) {
     }
     // output basic info if successed
     cv::namedWindow(cCvWindow,
-                    cv::WINDOW_AUTOSIZE); // Create a window for display.
+                    cv::WINDOW_AUTOSIZE);  // Create a window for display.
     cv::setWindowTitle(cCvWindow, "Raw image");
     cv::imshow(cCvWindow, image);
     CV_WAIT;
@@ -50,16 +52,16 @@ int main(int argc, char **argv) {
             }
         }
     }
-    chrono::duration<double, std::milli> duration = sClock::now() - t0;
+    DurationMS timeUsed = sClock::now() - t0;
     cout.precision(3);
-    cout << "Iterate through entire image cost " << duration.count() << " ms"
+    cout << "Iterate through entire image cost " << timeUsed.count() << " ms"
          << endl;
 
     // copying cv::Mat
-    cv::Mat image_ref = image; // image_ref is a reference of image
+    cv::Mat image_ref = image;  // image_ref is a reference of image
     // change image_ref will cause both image_ref and image to change
     auto rectTopLeft = cv::Rect(0, 0, 100, 100);
-    image_ref(rectTopLeft).setTo(0); // set top left to 0
+    image_ref(rectTopLeft).setTo(0);  // set top left to 0
     cv::setWindowTitle(cCvWindow, "After modifying reference copy");
     cv::imshow(cCvWindow, image);
     CV_WAIT;
@@ -69,6 +71,37 @@ int main(int argc, char **argv) {
     image_clone(rectTopLeft).setTo(255);
     cv::setWindowTitle(cCvWindow, "After modifying image clone");
     cv::imshow(cCvWindow, image);
+    CV_WAIT;
+
+    // compute ORB feature
+    vector<cv::KeyPoint> keyPoints;
+    // cv::Mat descriptors;
+    cv::Ptr<cv::ORB> orb = cv::ORB::create(
+        500,   // maximum number of features to retain
+        1.2f,  // Pyramid decimation ratio, similar to mip-mapping
+        8,     // number of pyramid levels
+        31,    // size of the border where the features are not detected
+        0,     // first level: level of pyramid to put source image to
+        2,  // WTA_K: number of points that produce each element of the oriented
+            // BRIEF descriptor
+        cv::ORB::HARRIS_SCORE,  // algorithm to rank features
+        31,                     // size of the patch used by the oriented BRIEF
+        20                      // fast threshold
+    );
+    t0 = sClock::now();
+    // detect oriented FAST feature points
+    orb->detect(image, keyPoints);
+    timeUsed = sClock::now() - t0;
+    cout << "FAST feature extraction cost " << timeUsed.count() << " ms"
+         << endl;
+    // compute BEIEF descriptor based on detected FAST feature points
+    // (not needed in this example)
+    // orb->compute(image, keyPoints, descriptors);
+    // visualize result
+    cv::Mat orbImage;
+    cv::drawKeypoints(image, keyPoints, orbImage);
+    cv::setWindowTitle(cCvWindow, "Detected FAST features");
+    cv::imshow(cCvWindow, orbImage);
     CV_WAIT;
 
     // clean up
