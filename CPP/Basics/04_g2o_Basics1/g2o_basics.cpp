@@ -78,11 +78,11 @@ int main(int argc, char **argv) {
     double a = 1.0, b = 2.0, c = 1.0; // parameters
     int N = 200;                      // number of points
     int nIter = 100;                  // number of iterations of the solver
-    double wSigma = 0.25;             // sigma of noise
+    double wSigma = 0.5;              // sigma of noise
     cv::RNG rng;                      // random number generator
     double abc[3] = {0, 0, 0};        // estimated parameters
     vector<double> xData, yData;      // measured data
-    constexpr SolverTypes solverType = SolverTypes::Levenberg;
+    constexpr SolverTypes solverType = SolverTypes::GaussNewton;
     // generate observations
     cout << "Generating observations... " << endl;
     for (int i = 0; i < N; ++i) {
@@ -100,11 +100,13 @@ int main(int argc, char **argv) {
     switch (solverType) {
     case SolverTypes::Levenberg:
         cout << "Levenberg" << endl;
-        pSolverAlgo = new g2o::OptimizationAlgorithmLevenberg(std::move(pSolver));
+        pSolverAlgo =
+            new g2o::OptimizationAlgorithmLevenberg(std::move(pSolver));
         break;
     case SolverTypes::GaussNewton:
         cout << "Gauss-Newton" << endl;
-        pSolverAlgo = new g2o::OptimizationAlgorithmGaussNewton(std::move(pSolver));
+        pSolverAlgo =
+            new g2o::OptimizationAlgorithmGaussNewton(std::move(pSolver));
         break;
     case SolverTypes::Dogleg:
         cout << "Dogleg" << endl;

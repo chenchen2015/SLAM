@@ -1,14 +1,18 @@
 cmake_minimum_required( VERSION 2.8 )
 project( imageBasics )
 
-# 添加c++ 11标准支持
-set( CMAKE_CXX_FLAGS "-std=c++11" )
+## configure build
+set( CMAKE_BUILD_TYPE Release )
+add_compile_options(-std=c++11)
+# Optimization flag, (low) O1 -> O3 (high)
+#set( CMAKE_CXX_FLAGS_RELEASE "-O3" )
+# generate compile commands
+set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
 
-# 寻找OpenCV库
-find_package( OpenCV 4 REQUIRED )
-# 添加头文件
-include_directories( ${OpenCV_INCLUDE_DIRS} )
+# OpenCV
+find_package( OpenCV REQUIRED )
+include_directories( ${OpenCV_DIRS} )
 
 add_executable( imageBasics imageBasics.cpp )
-# 链接OpenCV库
+# link OpenCV
 target_link_libraries( imageBasics ${OpenCV_LIBS} )
