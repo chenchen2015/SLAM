@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
     }
     cout << "Loaded " << pts3d.size() << " 3D-2D point pairs" << endl;
     // use PnP implementation to solve for camera pose
-    cv::Mat rot, t;
+    cv::Mat rotVec, t;
     // solve using EPnP
     // more methods shown in
     // https://docs.opencv.org/4.0.1/d9/d0c/group__calib3d.html#ga549c2075fac14829ff4a58bc931c033d
@@ -90,52 +90,18 @@ int main(int argc, char** argv) {
                  pts2d,             // imagePoints
                  TUMCamera::K,      // camera matrix
                  nullptr,           // distortion coefficients
-                 rot, t,            // Output rotation and translation vector
+                 rotVec, t,         // Output rotation and translation vector
                  false,             // useExtrinsicGuess
                  cv::SOLVEPNP_EPNP  // Method for solving a PnP problem
     );
-
-    // estimate camera pose
-    cv::Mat Rot, t;
-    poseEstimation2d2d(keyPoints1, keyPoints2, matches, Rot, t);
-    // triangulate
-    vector<cv::Point3d> pts3d;
-    triangulate(keyPoints1, keyPoints2, matches, Rot, t, pts3d);
-    // validate reprojection error
-    double maxReprojErr = 0;
-    for (int i = 0; i < matches.size(); ++i) {
-        // view 1
-        cv::Point2d pt1Cam =
-            img2Cam(keyPoints1[matches[i].queryIdx].pt, TUMCamera::K);
-        // dehomogenize triangulated point
-        cv::Point2d pt1CamHat(
-            pts3d[i].x / pts3d[i].z, 
-            pts3d[i].y / pts3d[i].z
-        );
-        double reprojErr1 = cv::norm(pt1Cam - pt1CamHat);
-        cout << "View 1 point in camera frame: " << pt1Cam << endl;
-        cout << "View 1 point reprojected: " << pt1CamHat << endl;
-        cout << "Reprojection error (L2): " << reprojErr1 << endl;
-        // view 2
-        cv::Point2d pt2Cam =
-            img2Cam(keyPoints2[matches[i].trainIdx].pt, TUMCamera::K);
-        cv::Mat pt2CamProj =
-            Rot * (cv::Mat_<double>(3, 1) << pts3d[i].x, pts3d[i].y, pts3d[i].z) +
-            t;
-        // dehomogenize
-        cv::Point2d pt2CamHat(
-            pt2CamProj.at<double>(0, 0) / pt2CamProj.at<double>(2, 0), 
-            pt2CamProj.at<double>(1, 0) / pt2CamProj.at<double>(2, 0)
-        );
-        double reprojErr2 = cv::norm(pt2Cam - pt2CamHat);
-        cout << "View 2 point in camera frame: " << pt2Cam << endl;
-        cout << "View 2 point reprojected: " << pt2CamHat << endl;
-        cout << "Reprojection error (L2): " << reprojErr2 << endl << endl;
-        // update maximum reprojection error
-        if (maxReprojErr < reprojErr1) maxReprojErr = reprojErr1;
-        if (maxReprojErr < reprojErr2) maxReprojErr = reprojErr2;
-    }
-    cout << "Maximum reprojection error (L2): " << maxReprojErr << endl;
+    // convert rotation vector [rotVec] to rotation matrix [Rot]
+    // use the Rodrigues formula
+    cv::Mat Rot;
+    cv::Rodrigues(rotVec, Rot);
+    cout << "Rotation matrix: " << endl << Rot << endl;
+    cout << "Translation vector:" << endl << t << endl;
+    // start bundle adjustment
+    bundleAdjustment(pts3d, pts2d, Rot, t);
 
     return EXIT_SUCCESS;
 }
@@ -195,60 +161,26 @@ cv::Point2d img2Cam(const cv::Point2d& p, const cv::Mat& K) {
                        (p.y - K.at<double>(1, 2)) / K.at<double>(1, 1));
 }
 
-void poseEstimation2d2d(const vector<cv::KeyPoint>& keyPoints1,
-                        const vector<cv::KeyPoint>& keyPoints2,
-                        const vector<cv::DMatch>& matches, 
-                        cv::Mat& Rot, cv::Mat& t) {
-    // convert matched key points to vector of Point2f
-    vector<cv::Point2f> pts1, pts2;
-    for (int i = 0; i < matches.size(); ++i) {
-        pts1.push_back(keyPoints1[matches[i].queryIdx].pt);
-        pts2.push_back(keyPoints2[matches[i].trainIdx].pt);
-    }
-    // reconstruct fundamental matrix
-    cv::Mat fundamentalMat = cv::findFundamentalMat(pts1, pts2, cv::FM_8POINT);
-    cout << "Fundamental matrix: " << endl << fundamentalMat << endl;
-    // reconstruct essential matrix
-    cv::Mat essentialMat = cv::findEssentialMat(pts1, pts2, TUMCamera::focalLen,
-                                                TUMCamera::principalPt);
-    cout << "Essential matrix: " << endl << essentialMat << endl;
-    // compute homography
-    cv::Mat homography = cv::findHomography(pts1, pts2, cv::RANSAC, 3);
-    cout << "Homography: " << endl << homography << endl;
-    // recover pose
-    cv::recoverPose(essentialMat, pts1, pts2, Rot, t, TUMCamera::focalLen,
-                    TUMCamera::principalPt);
-    cout << "Recovered rotation: " << endl << Rot << endl;
-    cout << "Recovered translation: " << endl << t << endl;
-}
-
-void triangulate(const vector<cv::KeyPoint>& keyPoints1,
-                   const vector<cv::KeyPoint>& keyPoints2,
-                   const std::vector<cv::DMatch>& matches, const cv::Mat& Rot,
-                   const cv::Mat& t, vector<cv::Point3d>& pts3d) {
-    // projection matrix 3x4
-    cv::Mat proj1 =
-        (cv::Mat_<float>(3, 4) << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0);
-    cv::Mat proj2 =
-        (cv::Mat_<float>(3, 4) << Rot.at<double>(0, 0), Rot.at<double>(0, 1),
-         Rot.at<double>(0, 2), t.at<double>(0, 0), Rot.at<double>(1, 0),
-         Rot.at<double>(1, 1), Rot.at<double>(1, 2), t.at<double>(1, 0),
-         Rot.at<double>(2, 0), Rot.at<double>(2, 1), Rot.at<double>(2, 2),
-         t.at<double>(2, 0));
-    // convert to camera coordinates
-    vector<cv::Point2f> pts1, pts2;
-    for (const auto& m : matches) {
-        pts1.push_back(img2Cam(keyPoints1[m.queryIdx].pt, TUMCamera::K));
-        pts2.push_back(img2Cam(keyPoints2[m.trainIdx].pt, TUMCamera::K));
-    }
-    // triangulate
-    cv::Mat pts4d;
-    cv::triangulatePoints(proj1, proj2, pts1, pts2, pts4d);
-    // normalize and convert to homogenious coordinates
-    for (int i = 0; i < pts4d.cols; i++) {
-        cv::Mat x = pts4d.col(i);
-        x /= x.at<float>(3, 0); // normalize
-        cv::Point3d p(x.at<float>(0, 0), x.at<float>(1, 0), x.at<float>(2, 0));
-        pts3d.push_back(p);
-    }
+// camera pose is 6D and landmark is 3D
+using Block = g2o::BlockSolver<g2o::BlockSolverTraits<6, 3>>;
+void bundleAdjustment(const vector<cv::Point3f>& pts3d,
+                      const vector<cv::Point2f> pts2d, cv::Mat& Rot,
+                      cv::Mat& t){
+    // initialize g2o
+    auto pLinearSolver =
+        g2o::make_unique<g2o::LinearSolverCSparse<Block::PoseMatrixType>>();
+    auto pSolver = g2o::make_unique<Block>(std::move(pLinearSolver));
+    g2o::OptimizationAlgorithmLevenberg* pSolverAlgo =
+        new g2o::OptimizationAlgorithmLevenberg(std::move(pSolver));
+    g2o::SparseOptimizer optimizer;
+    optimizer.setAlgorithm(pSolverAlgo);
+    // set vertices
+    auto pCamPose = g2o::make_unique<g2o::VertexSE3Expmap>();
+    Eigen::Matrix3d rotMat;
+    rotMat << Rot.at<double>(0, 0), Rot.at<double>(0, 1), Rot.at<double>(0, 2),
+        Rot.at<double>(1, 0), Rot.at<double>(1, 1), Rot.at<double>(1, 2),
+        Rot.at<double>(2, 0), Rot.at<double>(2, 1), Rot.at<double>(2, 2);
+    // vertex 0
+    pCamPose->setId(0);
+    pCamPose->setEstimate();
 }
