@@ -109,7 +109,7 @@ void findFeatureMatches(const cv::Mat img1, const cv::Mat& img2,
 
     // filter matched points based on Hamming distance
     double minDist = 10000, maxDist = 0;
-    for (const auto& match : matches) {
+    for (const auto& match : rawMatches) {
         if (match.distance < minDist) minDist = match.distance;
         if (match.distance > maxDist) maxDist = match.distance;
     }
