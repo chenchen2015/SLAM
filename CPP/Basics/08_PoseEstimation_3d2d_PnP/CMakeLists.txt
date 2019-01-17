@@ -8,21 +8,29 @@ add_compile_options(-std=c++11)
 set( CMAKE_CXX_FLAGS_RELEASE "-O3" )
 # generate compile commands
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
+#list( APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules )
 
 # Eigen
 find_package( Eigen3 REQUIRED )
-include_directories( ${EIGEN3_INCLUDE_DIRS} )
 # G2O
 find_package( g2o REQUIRED )
-include_directories( ${G2O_INCLUDE_DIRS} )
+find_package( CSparse REQUIRED )
 # OpenCV
 find_package( OpenCV REQUIRED )
-include_directories( ${OpenCV_DIRS} )
+
+# include libraries
+include_directories( 
+    ${OpenCV_DIRS} 
+    ${EIGEN3_INCLUDE_DIRS}
+    ${G2O_INCLUDE_DIRS}
+    ${CSPARSE_INCLUDE_DIR}
+)
 
 add_executable( poseEstimatePnP main.cpp )
 # link g2o and OpenCV
 target_link_libraries( poseEstimatePnP 
     ${Eigen3_LIBS}
     ${OpenCV_LIBS}
-    g2o_core g2o_stuff
+    g2o_core g2o_stuff g2o_types_sba g2o_csparse_extension 
+    ${CSPARSE_LIBRARY}
 )

@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
     findFeatureMatches(img1, img2, keyPoints1, keyPoints2, matches);
     printf("Found %lu matched feature points", matches.size());
     // generate 3D points based on depth information (from depth image)
-    cv::Mat depthImg1 = cv::imread("../1_depth.png", cv::LOAD_IMAGE_UNCHANGED);
+    cv::Mat depthImg = cv::imread("../1_depth.png", cv::IMREAD_UNCHANGED);
     vector<cv::Point3f> pts3d;
     vector<cv::Point2f> pts2d;
     for(const auto& m : matches){
@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
     cv::solvePnP(pts3d,             // objectPoints - in object coordinate space
                  pts2d,             // imagePoints
                  TUMCamera::K,      // camera matrix
-                 nullptr,           // distortion coefficients
+                 cv::Mat(),           // distortion coefficients
                  rotVec, t,         // Output rotation and translation vector
                  false,             // useExtrinsicGuess
                  cv::SOLVEPNP_EPNP  // Method for solving a PnP problem
@@ -175,12 +175,56 @@ void bundleAdjustment(const vector<cv::Point3f>& pts3d,
     g2o::SparseOptimizer optimizer;
     optimizer.setAlgorithm(pSolverAlgo);
     // set vertices
-    auto pCamPose = g2o::make_unique<g2o::VertexSE3Expmap>();
+    g2o::VertexSE3Expmap* pCamPose = new g2o::VertexSE3Expmap();
     Eigen::Matrix3d rotMat;
     rotMat << Rot.at<double>(0, 0), Rot.at<double>(0, 1), Rot.at<double>(0, 2),
         Rot.at<double>(1, 0), Rot.at<double>(1, 1), Rot.at<double>(1, 2),
         Rot.at<double>(2, 0), Rot.at<double>(2, 1), Rot.at<double>(2, 2);
-    // vertex 0
+    // vertex 0 - camera pose
     pCamPose->setId(0);
-    pCamPose->setEstimate();
+    pCamPose->setEstimate(g2o::SE3Quat(
+        rotMat, Eigen::Vector3d(t.at<double>(0, 0), t.at<double>(1, 0),
+                                t.at<double>(2, 0))));
+    optimizer.addVertex(pCamPose);
+    // vertex 1~N, landmarks
+    int idx = 1;
+    for(const auto& p : pts3d){
+        // landmarks
+        g2o::VertexSBAPointXYZ* pt = new g2o::VertexSBAPointXYZ();
+        pt->setId(idx++);
+        pt->setEstimate(Eigen::Vector3d(p.x, p.y, p.z));
+        pt->setMarginalized(true);
+        optimizer.addVertex(pt);
+    }
+    // add camera intrinsics as parameter
+    g2o::CameraParameters* camParam = new g2o::CameraParameters(
+        TUMCamera::K.at<double>(0, 0),
+        Eigen::Vector2d(TUMCamera::K.at<double>(0, 2),
+                        TUMCamera::K.at<double>(1, 2)),
+        0);
+    camParam->setId(0);
+    optimizer.addParameter(camParam);
+    // add edges
+    idx = 1;
+    for(const auto& p : pts2d){
+        g2o::EdgeProjectXYZ2UV* pEdge = new g2o::EdgeProjectXYZ2UV();
+        pEdge->setId(idx);
+        pEdge->setVertex(
+            0, dynamic_cast<g2o::VertexSBAPointXYZ*>(optimizer.vertex(idx)));
+        pEdge->setVertex(1, pCamPose);
+        pEdge->setMeasurement(Eigen::Vector2d(p.x, p.y));
+        pEdge->setParameterId(0, 0);
+        pEdge->setInformation(Eigen::Matrix2d::Identity());
+        optimizer.addEdge(pEdge);
+        idx++;
+    }
+    // start optimization and measure time
+    auto t0 = ClockT::now();
+    optimizer.initializeOptimization();
+    optimizer.optimize(100);
+    DurationMS timeUsed = ClockT::now() - t0;
+    cout << "Optimization time: " << timeUsed.count() << " ms" << endl;
+    // show result
+    cout << "Reconstructed pose T:" << endl
+         << Eigen::Isometry3d(pCamPose->estimate()).matrix() << endl;
 }
