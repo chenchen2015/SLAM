@@ -69,6 +69,7 @@ int main(int argc, char** argv) {
     cv::Mat depthImg = cv::imread("../1_depth.png", cv::IMREAD_UNCHANGED);
     vector<cv::Point3f> pts3d;
     vector<cv::Point2f> pts2d;
+    // [x, y, depth] coordinate of matched points from image 1
     for(const auto& m : matches){
         int row = keyPoints1[m.queryIdx].pt.y;
         int col = keyPoints1[m.queryIdx].pt.x;
@@ -80,7 +81,7 @@ int main(int argc, char** argv) {
         pts3d.push_back(cv::Point3d(pt1.x, pt1.y, depth));
         pts2d.push_back(keyPoints2[m.trainIdx].pt);
     }
-    cout << "Loaded " << pts3d.size() << " 3D-2D point pairs" << endl;
+    cout << "Loaded " << pts3d.size() << " 3D-2D point pairs" << endl << endl;
     // use PnP implementation to solve for camera pose
     cv::Mat rotVec, t;
     // solve using EPnP
@@ -98,8 +99,8 @@ int main(int argc, char** argv) {
     // use the Rodrigues formula
     cv::Mat Rot;
     cv::Rodrigues(rotVec, Rot);
-    cout << "Rotation matrix: " << endl << Rot << endl;
-    cout << "Translation vector:" << endl << t << endl;
+    cout << "Rotation matrix: " << endl << Rot << endl << endl;
+    cout << "Translation vector:" << endl << t << endl << endl;
     // start bundle adjustment
     bundleAdjustment(pts3d, pts2d, Rot, t);
 
