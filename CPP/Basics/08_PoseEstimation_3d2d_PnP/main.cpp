@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
     vector<cv::KeyPoint> keyPoints1, keyPoints2;
     vector<cv::DMatch> matches;
     findFeatureMatches(img1, img2, keyPoints1, keyPoints2, matches);
-    printf("Found %lu matched feature points", matches.size());
+    printf("Found %lu matched feature points\n", matches.size());
     // generate 3D points based on depth information (from depth image)
     cv::Mat depthImg = cv::imread("../1_depth.png", cv::IMREAD_UNCHANGED);
     vector<cv::Point3f> pts3d;
@@ -86,12 +86,12 @@ int main(int argc, char** argv) {
     // solve using EPnP
     // more methods shown in
     // https://docs.opencv.org/4.0.1/d9/d0c/group__calib3d.html#ga549c2075fac14829ff4a58bc931c033d
-    cv::solvePnP(pts3d,             // objectPoints - in object coordinate space
-                 pts2d,             // imagePoints
-                 TUMCamera::K,      // camera matrix
-                 cv::Mat(),           // distortion coefficients
-                 rotVec, t,         // Output rotation and translation vector
-                 false,             // useExtrinsicGuess
+    cv::solvePnP(pts3d,         // objectPoints - in object coordinate space
+                 pts2d,         // imagePoints
+                 TUMCamera::K,  // camera matrix
+                 cv::Mat(),     // distortion coefficients
+                 rotVec, t,     // Output rotation and translation vector
+                 false,         // useExtrinsicGuess
                  cv::SOLVEPNP_EPNP  // Method for solving a PnP problem
     );
     // convert rotation vector [rotVec] to rotation matrix [Rot]
@@ -145,7 +145,7 @@ void findFeatureMatches(const cv::Mat img1, const cv::Mat& img2,
     }
     cout << "FeatureMatcher: Min and max distance: " << minDist << ", "
          << maxDist << endl;
-    double distThreshold = max(2 * minDist, 20.0);
+    double distThreshold = max(2 * minDist, 30.0);
     for (const auto& match : rawMatches) {
         if (match.distance <= distThreshold) {
             matches.push_back(match);
@@ -220,6 +220,7 @@ void bundleAdjustment(const vector<cv::Point3f>& pts3d,
     }
     // start optimization and measure time
     auto t0 = ClockT::now();
+    //optimizer.setVerbose(true);
     optimizer.initializeOptimization();
     optimizer.optimize(100);
     DurationMS timeUsed = ClockT::now() - t0;
