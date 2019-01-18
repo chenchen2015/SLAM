@@ -163,11 +163,11 @@ int main(int argc, char** argv) {
                           p1_.at<double>(2, 0));
         float l2Error = cv::norm(p1Hat - pts1[i]);
         if (l2Error > maxError) maxError = l2Error;
-        cout << "          p1          = " << pts1[i] << endl;
+        // cout << "          p1          = " << pts1[i] << endl;
         //cout << "p2 = " << pts2[i] << endl;
-        cout << "p1_hat = (R * p2 + t) = " << p1Hat << endl;
-        cout << "Reconstruction error (L2): " << l2Error << endl;
-        //cout << endl;
+        // cout << "p1_hat = (R * p2 + t) = " << p1Hat << endl;
+        // cout << "Reconstruction error (L2): " << l2Error << endl;
+        // cout << endl;
     }
     cout << "Max reconstruction error (L2): " << maxError << endl;
 
@@ -317,6 +317,6 @@ void bundleAdjustment(const vector<cv::Point3f>& pts1,
     DurationMS timeUsed = ClockT::now() - t0;
     cout << "Optimization time: " << timeUsed.count() << " ms" << endl;
     // show result
-    cout << "Reconstructed pose T:" << endl
+    cout << "Reconstructed pose T (BA):" << endl
          << Eigen::Isometry3d(pCamPose->estimate()).matrix() << endl;
 }
