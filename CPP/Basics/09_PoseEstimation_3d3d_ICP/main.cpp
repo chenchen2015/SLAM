@@ -138,33 +138,32 @@ int main(int argc, char** argv) {
         // skip invalid depth
         if (!depth1 || !depth2) continue;
         cv::Point2d pt1 =
-            img2Cam(keyPoints1[m.queryIdx].pt, TUMCamera::K) * depth;
-        pts3d.push_back(cv::Point3d(pt1.x, pt1.y, depth));
-        pts2d.push_back(keyPoints2[m.trainIdx].pt);
+            img2Cam(keyPoints1[m.queryIdx].pt, TUMCamera::K) * depth1;
+        cv::Point2d pt2 =
+            img2Cam(keyPoints2[m.trainIdx].pt, TUMCamera::K) * depth2;
+        // get matched 3D points in camera frame [x, y, depth]
+        pts1.push_back(cv::Point3d(pt1.x, pt1.y, depth1));
+        pts2.push_back(cv::Point3d(pt2.x, pt2.y, depth2));
     }
-    cout << "Loaded " << pts3d.size() << " 3D-2D point pairs" << endl << endl;
-    // use PnP implementation to solve for camera pose
-    cv::Mat rotVec, t;
-    // solve using EPnP
-    // more methods shown in
-    // https://docs.opencv.org/4.0.1/d9/d0c/group__calib3d.html#ga549c2075fac14829ff4a58bc931c033d
-    cv::solvePnP(pts3d,         // objectPoints - in object coordinate space
-                 pts2d,         // imagePoints
-                 TUMCamera::K,  // camera matrix
-                 cv::Mat(),     // distortion coefficients
-                 rotVec, t,     // Output rotation and translation vector
-                 false,         // useExtrinsicGuess
-                 cv::SOLVEPNP_EPNP  // Method for solving a PnP problem
-    );
-    // convert rotation vector [rotVec] to rotation matrix [Rot]
-    // use the Rodrigues formula
-    cv::Mat Rot;
-    cv::Rodrigues(rotVec, Rot);
+    cout << "Loaded " << pts1.size() << " 3D-2D point pairs" << endl << endl;
+    // estimate camera pose using ICP algorithm from 3D point pairs
+    cv::Mat Rot, t;
+    poseEstimation3d3d(pts1, pts2, Rot, t);
     cout << "Rotation matrix: " << endl << Rot << endl << endl;
     cout << "Translation vector:" << endl << t << endl << endl;
     // start bundle adjustment
     bundleAdjustment(pts3d, pts2d, Rot, t);
-
+    // validate result, p1 = R * p2 + t
+    cout << endl << "Validate result" << endl << endl;
+    for (int i = 0; i < 5; ++i) {
+        cout << "p1 = " << pts1[i] << endl;
+        cout << "p2 = " << pts2[i] << endl;
+        cout << "(R * p2 + t) = "
+             << R * (Mat_<double>(3, 1) << pts2[i].x, pts2[i].y, pts2[i].z) + t
+             << endl;
+        cout << endl;
+    } 
+    
     return EXIT_SUCCESS;
 }
 
@@ -223,11 +222,56 @@ cv::Point2d img2Cam(const cv::Point2d& p, const cv::Mat& K) {
                        (p.y - K.at<double>(1, 2)) / K.at<double>(1, 1));
 }
 
+// ICP pose estimation
+void poseEstimation3d3d(const vector<cv::Point3f>& pts1,
+                        const vector<cv::Point3f>& pts2, cv::Mat& R,
+                        cv::Mat& t){
+    // center of mass
+    cv::Point3f p1, p2;   
+    int N = pts1.size();  // number of matched points
+    for(int i =0; i < N; ++i){
+        p1 += pts1[i];
+        p2 += pts2[i];
+    }
+    p1 = p1 / N;
+    p2 = p2 / N;
+    // remove centroid, reset to origin
+    vector<cv::Point3f> q1(N), q2(N);
+    for (int i = 0; i < N; ++i){
+        q1[i] = pts1[i] - p1;
+        q2[i] = pts2[i] - p2;
+    }
+    // compute W = q1 * q2.T
+    Eigen::Matrix3d W = Eigen::Matrix3d::Zero();
+    for (int i = 0; i < N; ++i) {
+        W += Eigen::Vector3d(q1[i].x, q1[i].y, q1[i].z) *
+             Eigen::Vector3d(q2[i].x, q2[i].y, q2[i].z).transpose();
+    }
+    cout << "W = " << endl << W << endl;
+    // SVD of W
+    Eigen::JacobiSVD<Eigen::Matrix3d> svd(W, Eigen::ComputeFullU | Eigen::ComputeFullV);
+    Eigen::Matrix3d U = svd.matrixU();
+    Eigen::Matrix3d V = svd.matrixV();
+    // flip polarity if needed
+    if(U.determinant() * V.determinant() < 0){
+        for (int i = 0; i < 3; ++i) U(i, 2) *= -1;
+    }
+    cout << "SVD [U] = " << endl << U << endl;
+    cout << "SVD [V] = " << endl << V << endl;
+    // reconstruct rotation and translation
+    Eigen::Matrix3d R_ = U * (V.transpose());
+    Eigen::Vector3d t_ = Eigen::Vector3d(p1.x, p1.y, p1.z) -
+                         R_ * Eigen::Vector3d(p2.x, p2.y, p2.z);
+    // convert to cv::Mat
+    R = (Mat_<double>(3, 3) << R_(0, 0), R_(0, 1), R_(0, 2), R_(1, 0), R_(1, 1),
+         R_(1, 2), R_(2, 0), R_(2, 1), R_(2, 2));
+    t = (Mat_<double>(3, 1) << t_(0, 0), t_(1, 0), t_(2, 0));
+}
+
 // camera pose is 6D and landmark is 3D
 using Block = g2o::BlockSolver<g2o::BlockSolverTraits<6, 3>>;
-void bundleAdjustment(const vector<cv::Point3f>& pts3d,
-                      const vector<cv::Point2f> pts2d, cv::Mat& Rot,
-                      cv::Mat& t){
+void bundleAdjustment(const vector<cv::Point3f>& pts1,
+                      const vector<cv::Point3f> pts2){
     // initialize g2o
     auto pLinearSolver =
         g2o::make_unique<g2o::LinearSolverCSparse<Block::PoseMatrixType>>();
@@ -238,46 +282,24 @@ void bundleAdjustment(const vector<cv::Point3f>& pts3d,
     optimizer.setAlgorithm(pSolverAlgo);
     // set vertices
     g2o::VertexSE3Expmap* pCamPose = new g2o::VertexSE3Expmap();
-    Eigen::Matrix3d rotMat;
-    rotMat << Rot.at<double>(0, 0), Rot.at<double>(0, 1), Rot.at<double>(0, 2),
-        Rot.at<double>(1, 0), Rot.at<double>(1, 1), Rot.at<double>(1, 2),
-        Rot.at<double>(2, 0), Rot.at<double>(2, 1), Rot.at<double>(2, 2);
     // vertex 0 - camera pose
     pCamPose->setId(0);
-    pCamPose->setEstimate(g2o::SE3Quat(
-        rotMat, Eigen::Vector3d(t.at<double>(0, 0), t.at<double>(1, 0),
-                                t.at<double>(2, 0))));
+    pCamPose->setEstimate(
+        g2o::SE3Quat(Eigen::Matrix3d::Identity(), Eigen::Vector3d(0, 0, 0))
+    );
     optimizer.addVertex(pCamPose);
-    // vertex 1~N, landmarks
+    // edges
+    vector<EdgeProjectXYZRGBDPoseOnly*> edges;
     int idx = 1;
     for(const auto& p : pts3d){
-        // landmarks
-        g2o::VertexSBAPointXYZ* pt = new g2o::VertexSBAPointXYZ();
-        pt->setId(idx++);
-        pt->setEstimate(Eigen::Vector3d(p.x, p.y, p.z));
-        pt->setMarginalized(true);
-        optimizer.addVertex(pt);
-    }
-    // add camera intrinsics as parameter
-    g2o::CameraParameters* camParam = new g2o::CameraParameters(
-        TUMCamera::K.at<double>(0, 0),
-        Eigen::Vector2d(TUMCamera::K.at<double>(0, 2),
-                        TUMCamera::K.at<double>(1, 2)),
-        0);
-    camParam->setId(0);
-    optimizer.addParameter(camParam);
-    // add edges
-    idx = 1;
-    for(const auto& p : pts2d){
-        g2o::EdgeProjectXYZ2UV* pEdge = new g2o::EdgeProjectXYZ2UV();
+        EdgeProjectXYZRGBDPoseOnly* pEdge = new EdgeProjectXYZRGBDPoseOnly(
+            Eigen::Vector3d(pts2[i].x, pts2[i].y, pts2[i].z));
         pEdge->setId(idx);
-        pEdge->setVertex(
-            0, dynamic_cast<g2o::VertexSBAPointXYZ*>(optimizer.vertex(idx)));
-        pEdge->setVertex(1, pCamPose);
-        pEdge->setMeasurement(Eigen::Vector2d(p.x, p.y));
-        pEdge->setParameterId(0, 0);
-        pEdge->setInformation(Eigen::Matrix2d::Identity());
-        optimizer.addEdge(pEdge);
+        pEdge->setVertex(0, dynamic_cast<g2o::VertexSE3Expmap*>(pCamPose));
+        pEdge->setMeasurement(Eigen::Vector3d(pts1[i].x, pts1[i].y, pts1[i].z));
+        pEdge->setInformation(Eigen::Matrix3d::Identity() * 1e4);
+        optimizer.addVertex(pt);
+        edges.push_back(pEdge);
         idx++;
     }
     // start optimization and measure time
