@@ -11,6 +11,7 @@ using DurationMS = chrono::duration<double, std::milli>;
 // Eigen
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <Eigen/SVD>
 // G2O
 #include <g2o/core/base_vertex.h>
 #include <g2o/core/base_unary_edge.h>
@@ -18,7 +19,6 @@ using DurationMS = chrono::duration<double, std::milli>;
 #include <g2o/core/optimization_algorithm_levenberg.h>
 #include <g2o/solvers/csparse/linear_solver_csparse.h>
 #include <g2o/types/sba/types_six_dof_expmap.h>
-
 
 constexpr char cWindowMain[] = "main";
 #define CV_WAIT cv::waitKey(0)
@@ -47,6 +47,10 @@ void findFeatureMatches(const cv::Mat img1, const cv::Mat& img2,
                         vector<cv::KeyPoint>& keyPoints2,
                         vector<cv::DMatch>& matches);
 
+void poseEstimation3d3d(const vector<cv::Point3f>& pts1,
+                        const vector<cv::Point3f>& pts2, cv::Mat& R,
+                        cv::Mat& t);
+
 void bundleAdjustment(const vector<cv::Point3f>& pts3d,
                       const vector<cv::Point2f> pts2d, cv::Mat& Rot,
                       cv::Mat& t);
@@ -54,6 +58,59 @@ void bundleAdjustment(const vector<cv::Point3f>& pts3d,
 // image pixel coordinate to camera coordinates
 cv::Point2d img2Cam(const cv::Point2d& p, const cv::Mat& K);
 
+// edge class for g2o (camera pose)
+class EdgeProjectXYZRGBPoseOnly
+    : public g2o::BaseUnaryEdge<3, Eigen::Vector3d, g2o::VertexSE3Expmap> {
+public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+public:
+    // constructor
+    EdgeProjectXYZRGBDPoseOnly(const Eigen::Vector3d& pt) : _point(pt){}
+public:
+    virtual void computeError(){
+        const g2o::VertexSE3Expmap* pose =
+            static_cast<const g2o::VertexSE3Expmap*>(_vertices[0]);
+        // measurement is observated p, point is estimated pHat
+        _error = _measurement - pose->estimate().map(_point);
+    }
+
+    virtual void linearizeOplus(){
+        g2o::VertexSE3Expmap* pose = static_cast<g2o::VertexSE3Expmap*>(_vertices[0]);
+        g2o::SE3Quat T(pose->estimate());
+        Eigen::Vector3d xyzTrans = T.map(_point);
+        double x = xyzTrans[0];
+        double y = xyzTrans[1];
+        double z = xyzTrans[2];
+
+        // Jacobian
+        _jacobianOplusXi(0, 0) = 0;
+        _jacobianOplusXi(0, 1) = -z;
+        _jacobianOplusXi(0, 2) = y;
+        _jacobianOplusXi(0, 3) = -1;
+        _jacobianOplusXi(0, 4) = 0;
+        _jacobianOplusXi(0, 5) = 0;
+
+        _jacobianOplusXi(1, 0) = z;
+        _jacobianOplusXi(1, 1) = 0;
+        _jacobianOplusXi(1, 2) = -x;
+        _jacobianOplusXi(1, 3) = 0;
+        _jacobianOplusXi(1, 4) = -1;
+        _jacobianOplusXi(1, 5) = 0;
+
+        _jacobianOplusXi(2, 0) = -y;
+        _jacobianOplusXi(2, 1) = x;
+        _jacobianOplusXi(2, 2) = 0;
+        _jacobianOplusXi(2, 3) = 0;
+        _jacobianOplusXi(2, 4) = 0;
+        _jacobianOplusXi(2, 5) = -1;
+    }
+    // IO, not used
+    bool read(istream& in) {}
+    bool write(ostream& out) const {}
+
+protected:
+    Eigen::Vector3d _point;
+};
 
 int main(int argc, char** argv) {
     // read images
@@ -66,16 +123,20 @@ int main(int argc, char** argv) {
     findFeatureMatches(img1, img2, keyPoints1, keyPoints2, matches);
     printf("Found %lu matched feature points\n", matches.size());
     // generate 3D points based on depth information (from depth image)
-    cv::Mat depthImg = cv::imread("../1_depth.png", cv::IMREAD_UNCHANGED);
-    vector<cv::Point3f> pts3d;
-    vector<cv::Point2f> pts2d;
+    cv::Mat depthImg1 = cv::imread("../1_depth.png", cv::IMREAD_UNCHANGED);
+    cv::Mat depthImg2 = cv::imread("../1_depth.png", cv::IMREAD_UNCHANGED);
+    vector<cv::Point3f> pts1, pts2;
     // [x, y, depth] coordinate of matched points from image 1
     for(const auto& m : matches){
         int row = keyPoints1[m.queryIdx].pt.y;
         int col = keyPoints1[m.queryIdx].pt.x;
-        float depth = depthImg.ptr<unsigned short>(row)[col] / TUMCamera::depthScale;
+        float depth1 =
+            depthImg1.ptr<unsigned short>(row)[col] / TUMCamera::depthScale;
+        row = keyPoints2[m.trainIdx].pt.y;
+        col = keyPoints2[m.trainIdx].pt.x;
+        float depth2 = depthImg2.ptr<unsigned short>(row)[col] / TUMCamera::depthScale;
         // skip invalid depth
-        if (!depth) continue;
+        if (!depth1 || !depth2) continue;
         cv::Point2d pt1 =
             img2Cam(keyPoints1[m.queryIdx].pt, TUMCamera::K) * depth;
         pts3d.push_back(cv::Point3d(pt1.x, pt1.y, depth));
@@ -84,7 +145,7 @@ int main(int argc, char** argv) {
     cout << "Loaded " << pts3d.size() << " 3D-2D point pairs" << endl << endl;
     // use PnP implementation to solve for camera pose
     cv::Mat rotVec, t;
-    // solve for camera 1's pose using EPnP
+    // solve using EPnP
     // more methods shown in
     // https://docs.opencv.org/4.0.1/d9/d0c/group__calib3d.html#ga549c2075fac14829ff4a58bc931c033d
     cv::solvePnP(pts3d,         // objectPoints - in object coordinate space
