@@ -52,14 +52,13 @@ void poseEstimation3d3d(const vector<cv::Point3f>& pts1,
                         cv::Mat& t);
 
 void bundleAdjustment(const vector<cv::Point3f>& pts3d,
-                      const vector<cv::Point2f> pts2d, cv::Mat& Rot,
-                      cv::Mat& t);
+                      const vector<cv::Point3f>& pts2d);
 
 // image pixel coordinate to camera coordinates
 cv::Point2d img2Cam(const cv::Point2d& p, const cv::Mat& K);
 
 // edge class for g2o (camera pose)
-class EdgeProjectXYZRGBPoseOnly
+class EdgeProjectXYZRGBDPoseOnly
     : public g2o::BaseUnaryEdge<3, Eigen::Vector3d, g2o::VertexSE3Expmap> {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -124,7 +123,7 @@ int main(int argc, char** argv) {
     printf("Found %lu matched feature points\n", matches.size());
     // generate 3D points based on depth information (from depth image)
     cv::Mat depthImg1 = cv::imread("../1_depth.png", cv::IMREAD_UNCHANGED);
-    cv::Mat depthImg2 = cv::imread("../1_depth.png", cv::IMREAD_UNCHANGED);
+    cv::Mat depthImg2 = cv::imread("../2_depth.png", cv::IMREAD_UNCHANGED);
     vector<cv::Point3f> pts1, pts2;
     // [x, y, depth] coordinate of matched points from image 1
     for(const auto& m : matches){
@@ -152,18 +151,26 @@ int main(int argc, char** argv) {
     cout << "Rotation matrix: " << endl << Rot << endl << endl;
     cout << "Translation vector:" << endl << t << endl << endl;
     // start bundle adjustment
-    bundleAdjustment(pts3d, pts2d, Rot, t);
+    bundleAdjustment(pts1, pts2);
     // validate result, p1 = R * p2 + t
     cout << endl << "Validate result" << endl << endl;
-    for (int i = 0; i < 5; ++i) {
-        cout << "p1 = " << pts1[i] << endl;
-        cout << "p2 = " << pts2[i] << endl;
-        cout << "(R * p2 + t) = "
-             << R * (Mat_<double>(3, 1) << pts2[i].x, pts2[i].y, pts2[i].z) + t
-             << endl;
-        cout << endl;
-    } 
-    
+    float maxError = 0.0f;
+    for (int i = 0; i < pts1.size(); ++i) {
+        cv::Mat p1_ =
+            Rot * (cv::Mat_<double>(3, 1) << pts2[i].x, pts2[i].y, pts2[i].z) +
+            t;
+        cv::Point3f p1Hat(p1_.at<double>(0, 0), p1_.at<double>(1, 0),
+                          p1_.at<double>(2, 0));
+        float l2Error = cv::norm(p1Hat - pts1[i]);
+        if (l2Error > maxError) maxError = l2Error;
+        cout << "          p1          = " << pts1[i] << endl;
+        //cout << "p2 = " << pts2[i] << endl;
+        cout << "p1_hat = (R * p2 + t) = " << p1Hat << endl;
+        cout << "Reconstruction error (L2): " << l2Error << endl;
+        //cout << endl;
+    }
+    cout << "Max reconstruction error (L2): " << maxError << endl;
+
     return EXIT_SUCCESS;
 }
 
@@ -263,15 +270,15 @@ void poseEstimation3d3d(const vector<cv::Point3f>& pts1,
     Eigen::Vector3d t_ = Eigen::Vector3d(p1.x, p1.y, p1.z) -
                          R_ * Eigen::Vector3d(p2.x, p2.y, p2.z);
     // convert to cv::Mat
-    R = (Mat_<double>(3, 3) << R_(0, 0), R_(0, 1), R_(0, 2), R_(1, 0), R_(1, 1),
+    R = (cv::Mat_<double>(3, 3) << R_(0, 0), R_(0, 1), R_(0, 2), R_(1, 0), R_(1, 1),
          R_(1, 2), R_(2, 0), R_(2, 1), R_(2, 2));
-    t = (Mat_<double>(3, 1) << t_(0, 0), t_(1, 0), t_(2, 0));
+    t = (cv::Mat_<double>(3, 1) << t_(0, 0), t_(1, 0), t_(2, 0));
 }
 
 // camera pose is 6D and landmark is 3D
 using Block = g2o::BlockSolver<g2o::BlockSolverTraits<6, 3>>;
 void bundleAdjustment(const vector<cv::Point3f>& pts1,
-                      const vector<cv::Point3f> pts2){
+                      const vector<cv::Point3f>& pts2){
     // initialize g2o
     auto pLinearSolver =
         g2o::make_unique<g2o::LinearSolverCSparse<Block::PoseMatrixType>>();
@@ -291,16 +298,16 @@ void bundleAdjustment(const vector<cv::Point3f>& pts1,
     // edges
     vector<EdgeProjectXYZRGBDPoseOnly*> edges;
     int idx = 1;
-    for(const auto& p : pts3d){
+    for (int i = 0; i < pts1.size(); ++i) {
         EdgeProjectXYZRGBDPoseOnly* pEdge = new EdgeProjectXYZRGBDPoseOnly(
             Eigen::Vector3d(pts2[i].x, pts2[i].y, pts2[i].z));
-        pEdge->setId(idx);
+        pEdge->setId(i+1);
         pEdge->setVertex(0, dynamic_cast<g2o::VertexSE3Expmap*>(pCamPose));
         pEdge->setMeasurement(Eigen::Vector3d(pts1[i].x, pts1[i].y, pts1[i].z));
         pEdge->setInformation(Eigen::Matrix3d::Identity() * 1e4);
-        optimizer.addVertex(pt);
+        optimizer.addEdge(pEdge);
         edges.push_back(pEdge);
-        idx++;
+        //idx++;
     }
     // start optimization and measure time
     auto t0 = ClockT::now();

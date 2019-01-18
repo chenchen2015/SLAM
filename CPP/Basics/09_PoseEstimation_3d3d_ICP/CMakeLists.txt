@@ -1,5 +1,5 @@
 cmake_minimum_required( VERSION 2.8 )
-project( poseEstimatePnP )
+project( poseEstimationICP )
 
 ## configure build
 set( CMAKE_BUILD_TYPE Release )
@@ -8,7 +8,6 @@ add_compile_options(-std=c++11)
 set( CMAKE_CXX_FLAGS_RELEASE "-O3" )
 # generate compile commands
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
-#list( APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules )
 
 # Eigen
 find_package( Eigen3 REQUIRED )
@@ -26,9 +25,9 @@ include_directories(
     ${CSPARSE_INCLUDE_DIR}
 )
 
-add_executable( poseEstimatePnP main.cpp )
+add_executable( poseEstimationICP main.cpp )
 # link g2o and OpenCV
-target_link_libraries( poseEstimatePnP 
+target_link_libraries( poseEstimationICP 
     ${Eigen3_LIBS}
     ${OpenCV_LIBS}
     g2o_core g2o_stuff g2o_types_sba g2o_csparse_extension 
