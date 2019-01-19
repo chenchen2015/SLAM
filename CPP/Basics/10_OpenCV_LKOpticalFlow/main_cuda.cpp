@@ -9,6 +9,7 @@ using ClockT = chrono::high_resolution_clock;
 using DurationMS = chrono::duration<double, std::milli>;
 // OpenCV
 #include <opencv2/core/core.hpp>
+#include <opencv2/cudafeatures2d.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/video/tracking.hpp>
@@ -58,8 +59,8 @@ int main(int argc, char **argv) {
         // extract FAST features only on the first frame
         if(keyPoints.empty()){
             vector<cv::KeyPoint> kps;
-            cv::Ptr<cv::FastFeatureDetector> detector =
-                cv::FastFeatureDetector::create();
+            cv::Ptr<cv::cuda::FastFeatureDetector> detector =
+                cv::cuda::FastFeatureDetector::create();
             detector->detect(colorImg, kps);
             for (const auto &kp : kps) keyPoints.push_back(kp.pt);
             lastColorImg = colorImg;

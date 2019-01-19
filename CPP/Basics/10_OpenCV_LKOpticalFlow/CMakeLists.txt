@@ -13,6 +13,9 @@ set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
 find_package( OpenCV REQUIRED )
 include_directories( ${OpenCV_DIRS} )
 
+# CPU version
 add_executable( opticalFlowLK main.cpp )
-# link OpenCV
 target_link_libraries( opticalFlowLK ${OpenCV_LIBS} )
+# CUDA version
+add_executable( opticalFlowLKCUDA main_cuda.cpp )
+target_link_libraries( opticalFlowLKCUDA ${OpenCV_LIBS} )
