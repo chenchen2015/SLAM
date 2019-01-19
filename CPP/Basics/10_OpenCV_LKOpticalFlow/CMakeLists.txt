@@ -17,5 +17,5 @@ include_directories( ${OpenCV_DIRS} )
 add_executable( opticalFlowLK main.cpp )
 target_link_libraries( opticalFlowLK ${OpenCV_LIBS} )
 # CUDA version
-add_executable( opticalFlowLKCUDA main_cuda.cpp )
-target_link_libraries( opticalFlowLKCUDA ${OpenCV_LIBS} )
+#add_executable( opticalFlowLKCUDA main_cuda.cpp )
+#target_link_libraries( opticalFlowLKCUDA ${OpenCV_LIBS} )
