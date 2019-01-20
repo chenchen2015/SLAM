@@ -207,10 +207,9 @@ int main(int argc, char **argv) {
     // create new window for display
     cv::namedWindow(cCvWindow, cv::WINDOW_AUTOSIZE);
     int frameIdx = 0;
-    constexpr int MAX_FRAME = 100;
+    constexpr int MAX_FRAME = 10;
     double totalTime = 0;
     while (frameIdx++ < MAX_FRAME) {
-        cout << "Frame #" << frameIdx << endl;
         // read data
         fin >> timeRGB >> rgbFile >> timeDepth >> depthFile;
         colorImg = cv::imread(dataPath + "/" + rgbFile);
@@ -225,7 +224,6 @@ int main(int argc, char **argv) {
             cv::Ptr<cv::FastFeatureDetector> detector =
                 cv::FastFeatureDetector::create();
             detector->detect(colorImg, kps);
-            printf("Image shape %d x %d\n", depthImg.rows, depthImg.cols);
             for (const auto& kp : kps) {
                 // remove feature points that are too close 
                 // to the boundary
@@ -246,12 +244,13 @@ int main(int argc, char **argv) {
             continue;
         }
         // estimate camera pose using direct method
+        printf("Frame %2d: ", frameIdx);
         auto t0 = ClockT::now();
         poseEstimationDirect(measurements, &grayImg, TUMCamera::K, Tcw);
         DurationMS timeUsed = ClockT::now() - t0;
         totalTime += timeUsed.count();
-        printf("Frame %3d: %4ld measurements, time cost %.2f ms\n", frameIdx,
-               measurements.size(), timeUsed.count());
+        printf("%4ld measurements, time cost %.2f ms\n", measurements.size(),
+               timeUsed.count());
 
         // visualize feature points
         cv::Mat featureImg(colorImg.rows * 2, colorImg.cols, CV_8UC3);
@@ -329,7 +328,7 @@ bool poseEstimationDirect(const vector<Measurement>& measurements,
         optimizer.addEdge(pEdge);
         idx++;
     }
-    printf("There are %ld edges in graph\n", optimizer.edges().size());
+    printf("%4ld edges in graph, ", optimizer.edges().size());
     optimizer.initializeOptimization();
     optimizer.optimize(50);
     // update pose
