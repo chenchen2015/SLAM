@@ -22,8 +22,10 @@ using DurationMS = chrono::duration<double, std::milli>;
 #include <g2o/solvers/dense/linear_solver_dense.h>
 #include <g2o/types/sba/types_six_dof_expmap.h>
 using namespace g2o;
+// Eigen
+#include <Eigen/Core>
 
-#define CV_WAIT cv::waitKey(10)
+#define CV_WAIT cv::waitKey(0)
 constexpr char cCvWindow[] = "OpenCV Basics";
 const string dataPath = "../../data/rgbd_dataset_freiburg1_desk";
 enum SLAM_ERROR { ERR_FILE_NOT_EXIST = -1, ERR_TRACKING_FAIL_ALL_KEYPOINT_LOST = -2 };
@@ -44,18 +46,35 @@ inline void drawKeyPoints(const list<cv::Point2f>& kps, const cv::Mat& colorImg)
 // camera model
 namespace TUMCamera {
 // camera intrinsics, TUM Freiburg1
-constexpr float cx = 325.5;
-constexpr float cy = 253.5;
-constexpr float fx = 518.0;
-constexpr float fy = 519.0;
+constexpr float cx = 325.5f;
+constexpr float cy = 253.5f;
+constexpr float fx = 518.0f;
+constexpr float fy = 519.0f;
 constexpr float depthScale = 1000.0f;
-float depth_scale = 1000.0;
-const Eigen::Matrix3f K(fx, 0.0f, cx, 0.0f, fy, cy, 0.0f, 0.0f, 1.0f);
-
-// camera parameters
-const cv::Point2d principalPt(325.1, 249.7);
-constexpr double focalLen = 521;
+Eigen::Matrix3f K = (Eigen::Matrix3f() << fx, 0.0f, cx, 0.0f, fy, cy, 0.0f, 0.0f, 1.0f).finished();
 };  // namespace TUMCamera
+
+// measurement
+struct Measurement {
+    Measurement(Eigen::Vector3d p, float g) : posWorld(p), grayscale(g) {}
+    Eigen::Vector3d posWorld;
+    float grayscale;
+};
+
+inline Eigen::Vector3d project2Dto3D(int x, int y, int d, float fx, float fy,
+                                     float cx, float cy, float scale) {
+    float zz = float(d) / scale;
+    float xx = zz * (x - cx) / fx;
+    float yy = zz * (y - cy) / fy;
+    return Eigen::Vector3d(xx, yy, zz);
+}
+
+inline Eigen::Vector2d project3Dto2D(float x, float y, float z, float fx,
+                                     float fy, float cx, float cy) {
+    float u = fx * x / z + cx;
+    float v = fy * y / z + cy;
+    return Eigen::Vector2d(u, v);
+}
 
 // pose estimation using direct method
 // return false if failed
@@ -75,14 +94,14 @@ public:
 
     EdgeSE3ProjectDirect(Eigen::Vector3d point, float fx, float fy, float cx,
                          float cy, cv::Mat* image)
-        : x_world_(point), fx_(fx), fy_(fy), cx_(cx), cy_(cy), image_(image) {}
+        : xWorld_(point), fx_(fx), fy_(fy), cx_(cx), cy_(cy), image_(image) {}
 
 public:
     // the error is defined by the photometric error
     virtual void computeError() {
         const VertexSE3Expmap* v =
             static_cast<const VertexSE3Expmap*>(_vertices[0]);
-        Eigen::Vector3d x_local = v->estimate().map(x_world_);
+        Eigen::Vector3d x_local = v->estimate().map(xWorld_);
         float x = x_local[0] * fx_ / x_local[2] + cx_;
         float y = x_local[1] * fy_ / x_local[2] + cy_;
         // check x,y is in the image
@@ -174,6 +193,13 @@ int main(int argc, char **argv) {
         return SLAM_ERROR::ERR_FILE_NOT_EXIST;
     }
     string rgbFile, depthFile, timeRGB, timeDepth;
+    float cx = 325.5;
+    float cy = 253.5;
+    float fx = 518.0;
+    float fy = 519.0;
+    float depth_scale = 1000.0;
+    Eigen::Matrix3f K;
+    K << fx, 0.f, cx, 0.f, fy, cy, 0.f, 0.f, 1.0f;
     // measurements
     vector<Measurement> measurements;
     cv::Mat colorImg, depthImg, grayImg, prevColorImg;
@@ -191,32 +217,34 @@ int main(int argc, char **argv) {
         depthImg = cv::imread(dataPath + "/" + depthFile, cv::IMREAD_UNCHANGED);
         // skip if invalid
         if (!colorImg.data || !depthImg.data) continue;
-
+        // convert color image to grayscale
+        cv::cvtColor(colorImg, grayImg, cv::COLOR_BGR2GRAY);
         // extract FAST features only on the first frame
         if (frameIdx == 1) {
             vector<cv::KeyPoint> kps;
             cv::Ptr<cv::FastFeatureDetector> detector =
                 cv::FastFeatureDetector::create();
             detector->detect(colorImg, kps);
+            printf("Image shape %d x %d\n", depthImg.rows, depthImg.cols);
             for (const auto& kp : kps) {
                 // remove feature points that are too close 
                 // to the boundary
                 if (kp.pt.x < 20 || kp.pt.y < 20 ||
-                    (kp.pt.x + 20) > color.cols || (kp.pt.y + 20) > color.rows)
+                    (kp.pt.x + 20) > colorImg.cols || (kp.pt.y + 20) > colorImg.rows)
                     continue;
                 int u = cvRound(kp.pt.y), v = cvRound(kp.pt.x);
                 ushort depth = depthImg.ptr<ushort>(u)[v];
                 if (!depth) continue;
                 Eigen::Vector3d pt3d = project2Dto3D(
-                    kp.pt.x, kp.pt.y, depth, TUMCamera::fx, TUMCamera::fy,
-                    TUMCamera::cx, TUMCamera::cy, TUMCamera::depthScale);
+                    v, u, depth, TUMCamera::fx, TUMCamera::fy,
+                    TUMCamera::cx, TUMCamera::cy,
+                    TUMCamera::depthScale);
                 float grayscale = float(grayImg.ptr<uchar>(u)[v]);
                 measurements.push_back(Measurement(pt3d, grayscale));
             }
-            lastColorImg = colorImg;
+            prevColorImg = colorImg;
             continue;
         }
-
         // estimate camera pose using direct method
         auto t0 = ClockT::now();
         poseEstimationDirect(measurements, &grayImg, TUMCamera::K, Tcw);
@@ -224,6 +252,43 @@ int main(int argc, char **argv) {
         totalTime += timeUsed.count();
         printf("Frame %3d: %4ld measurements, time cost %.2f ms\n", frameIdx,
                measurements.size(), timeUsed.count());
+
+        // visualize feature points
+        cv::Mat featureImg(colorImg.rows * 2, colorImg.cols, CV_8UC3);
+        prevColorImg.copyTo(featureImg(cv::Rect(0, 0, colorImg.cols, colorImg.rows)));
+        colorImg.copyTo(featureImg(cv::Rect(0, colorImg.rows, colorImg.cols, colorImg.rows)));
+        for (const auto& m : measurements) {
+            if (rand() > RAND_MAX / 5) continue;
+            Eigen::Vector3d p = m.posWorld;
+            Eigen::Vector2d prevPixel =
+                project3Dto2D(p(0, 0), p(1, 0), p(2, 0), TUMCamera::fx,
+                              TUMCamera::fy, TUMCamera::cx, TUMCamera::cy);
+            Eigen::Vector3d p2 = Tcw * m.posWorld;
+            Eigen::Vector2d currentPixel =
+                project3Dto2D(p2(0, 0), p2(1, 0), p2(2, 0), TUMCamera::fx,
+                              TUMCamera::fy, TUMCamera::cx, TUMCamera::cy);
+            // out of bound, skip
+            if (currentPixel(0, 0) < 0 || currentPixel(0, 0) >= colorImg.cols ||
+                currentPixel(1, 0) < 0 || currentPixel(1, 0) >= colorImg.rows)
+                continue;
+
+            float b = 255 * float(rand()) / RAND_MAX;
+            float g = 255 * float(rand()) / RAND_MAX;
+            float r = 255 * float(rand()) / RAND_MAX;
+            cv::circle(featureImg,
+                       cv::Point2d(prevPixel(0, 0), prevPixel(1, 0)), 8,
+                       cv::Scalar(b, g, r), 2);
+            cv::circle(featureImg,
+                       cv::Point2d(currentPixel(0, 0),
+                                   currentPixel(1, 0) + colorImg.rows),
+                       8, cv::Scalar(b, g, r), 2);
+            cv::line(featureImg, cv::Point2d(prevPixel(0, 0), prevPixel(1, 0)),
+                     cv::Point2d(currentPixel(0, 0),
+                                 currentPixel(1, 0) + colorImg.rows),
+                     cv::Scalar(b, g, r), 1);
+        }
+        cv::imshow(cCvWindow, featureImg);
+        CV_WAIT;
     }
     cout << "Average tracking time cost is: " << totalTime / MAX_FRAME << " ms"
          << endl;
@@ -231,4 +296,42 @@ int main(int argc, char **argv) {
     // clean up
     cv::destroyAllWindows();
     return EXIT_SUCCESS;
+}
+
+// pose estimation using direct method
+// return false if failed
+using DirectBlock = g2o::BlockSolver<g2o::BlockSolverTraits<6, 1>>;
+bool poseEstimationDirect(const vector<Measurement>& measurements,
+                          cv::Mat* grayImg, Eigen::Matrix3f& intrinsics,
+                          Eigen::Isometry3d& Tcw) {
+    auto pLinearSolver =
+        g2o::make_unique<g2o::LinearSolverDense<DirectBlock::PoseMatrixType>>();
+    auto pSolver = g2o::make_unique<DirectBlock>(std::move(pLinearSolver));
+    auto pSolverAlgo =
+        new g2o::OptimizationAlgorithmLevenberg(std::move(pSolver));
+    g2o::SparseOptimizer optimizer;
+    optimizer.setAlgorithm(pSolverAlgo);
+    // vertex 0 - camera pose
+    auto pPose = new g2o::VertexSE3Expmap();
+    pPose->setEstimate(g2o::SE3Quat(Tcw.rotation(), Tcw.translation()));
+    pPose->setId(0);
+    optimizer.addVertex(pPose);
+    // add edges
+    int idx = 1;
+    for (const auto& m : measurements) {
+        auto pEdge = new EdgeSE3ProjectDirect(
+            m.posWorld, TUMCamera::K(0, 0), TUMCamera::K(1, 1),
+            TUMCamera::K(0, 2), TUMCamera::K(1, 2), grayImg);
+        pEdge->setVertex(0, pPose);
+        pEdge->setMeasurement(m.grayscale);
+        pEdge->setInformation(Eigen::Matrix<double, 1, 1>::Identity());
+        pEdge->setId(idx);
+        optimizer.addEdge(pEdge);
+        idx++;
+    }
+    printf("There are %ld edges in graph\n", optimizer.edges().size());
+    optimizer.initializeOptimization();
+    optimizer.optimize(50);
+    // update pose
+    Tcw = pPose->estimate();
 }
