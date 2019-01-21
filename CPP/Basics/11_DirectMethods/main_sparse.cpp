@@ -182,8 +182,13 @@ public:
     cv::Mat* image_ = nullptr;                 // reference image
 };
 
+enum MethodType {
+    DIRECT_SPARSE,
+    DIRECT_SEMI_SPARSE
+};
 
 int main(int argc, char **argv) {
+    constexpr MethodType methodType = MethodType::DIRECT_SEMI_SPARSE;
     // fix random seed
     srand((unsigned int)time(0));
     // load data
@@ -220,25 +225,46 @@ int main(int argc, char **argv) {
         cv::cvtColor(colorImg, grayImg, cv::COLOR_BGR2GRAY);
         // extract FAST features only on the first frame
         if (frameIdx == 1) {
-            vector<cv::KeyPoint> kps;
-            cv::Ptr<cv::FastFeatureDetector> detector =
-                cv::FastFeatureDetector::create();
-            detector->detect(colorImg, kps);
-            for (const auto& kp : kps) {
-                // remove feature points that are too close 
-                // to the boundary
-                if (kp.pt.x < 20 || kp.pt.y < 20 ||
-                    (kp.pt.x + 20) > colorImg.cols || (kp.pt.y + 20) > colorImg.rows)
-                    continue;
-                int u = cvRound(kp.pt.y), v = cvRound(kp.pt.x);
-                ushort depth = depthImg.ptr<ushort>(u)[v];
-                if (!depth) continue;
-                Eigen::Vector3d pt3d = project2Dto3D(
-                    v, u, depth, TUMCamera::fx, TUMCamera::fy,
-                    TUMCamera::cx, TUMCamera::cy,
-                    TUMCamera::depthScale);
-                float grayscale = float(grayImg.ptr<uchar>(u)[v]);
-                measurements.push_back(Measurement(pt3d, grayscale));
+            if (methodType == MethodType::DIRECT_SPARSE) {
+                vector<cv::KeyPoint> kps;
+                cv::Ptr<cv::FastFeatureDetector> detector =
+                    cv::FastFeatureDetector::create();
+                detector->detect(colorImg, kps);
+                for (const auto& kp : kps) {
+                    // remove feature points that are too close
+                    // to the boundary
+                    if (kp.pt.x < 20 || kp.pt.y < 20 ||
+                        (kp.pt.x + 20) > colorImg.cols ||
+                        (kp.pt.y + 20) > colorImg.rows)
+                        continue;
+                    int u = cvRound(kp.pt.y), v = cvRound(kp.pt.x);
+                    ushort depth = depthImg.ptr<ushort>(u)[v];
+                    if (!depth) continue;
+                    Eigen::Vector3d pt3d = project2Dto3D(
+                        v, u, depth, TUMCamera::fx, TUMCamera::fy,
+                        TUMCamera::cx, TUMCamera::cy, TUMCamera::depthScale);
+                    float grayscale = float(grayImg.ptr<uchar>(u)[v]);
+                    measurements.push_back(Measurement(pt3d, grayscale));
+                }
+            } else if (methodType == MethodType::DIRECT_SEMI_SPARSE){
+                // only select pixels with high gradiants
+                for (int x = 10; x < grayImg.cols - 10; ++x) {
+                    for (int y = 10; y < grayImg.rows - 10; ++y) {
+                        Eigen::Vector2d delta(grayImg.ptr<uchar>(y)[x + 1] -
+                                                  grayImg.ptr<uchar>(y)[x - 1],
+                                              grayImg.ptr<uchar>(y + 1)[x] -
+                                                  grayImg.ptr<uchar>(y - 1)[x]);
+                        if (delta.norm() < 50) continue;
+                        ushort depth = depthImg.ptr<ushort>(y)[x];
+                        if (!depth) continue;
+                        Eigen::Vector3d pt3d =
+                            project2Dto3D(x, y, depth, TUMCamera::fx,
+                                          TUMCamera::fy, TUMCamera::cx,
+                                          TUMCamera::cy, TUMCamera::depthScale);
+                        float grayscale = float(grayImg.ptr<uchar>(y)[x]);
+                        measurements.push_back(Measurement(pt3d, grayscale));
+                    }
+                }
             }
             prevColorImg = colorImg;
             continue;
@@ -270,21 +296,45 @@ int main(int argc, char **argv) {
             if (currentPixel(0, 0) < 0 || currentPixel(0, 0) >= colorImg.cols ||
                 currentPixel(1, 0) < 0 || currentPixel(1, 0) >= colorImg.rows)
                 continue;
-
-            float b = 255 * float(rand()) / RAND_MAX;
-            float g = 255 * float(rand()) / RAND_MAX;
-            float r = 255 * float(rand()) / RAND_MAX;
-            cv::circle(featureImg,
-                       cv::Point2d(prevPixel(0, 0), prevPixel(1, 0)), 8,
-                       cv::Scalar(b, g, r), 2);
-            cv::circle(featureImg,
-                       cv::Point2d(currentPixel(0, 0),
-                                   currentPixel(1, 0) + colorImg.rows),
-                       8, cv::Scalar(b, g, r), 2);
-            cv::line(featureImg, cv::Point2d(prevPixel(0, 0), prevPixel(1, 0)),
-                     cv::Point2d(currentPixel(0, 0),
-                                 currentPixel(1, 0) + colorImg.rows),
-                     cv::Scalar(b, g, r), 1);
+            if (methodType == MethodType::DIRECT_SPARSE) {
+                // use random color for the circles
+                float b = 255 * float(rand()) / RAND_MAX;
+                float g = 255 * float(rand()) / RAND_MAX;
+                float r = 255 * float(rand()) / RAND_MAX;
+                cv::circle(featureImg,
+                           cv::Point2d(prevPixel(0, 0), prevPixel(1, 0)), 8,
+                           cv::Scalar(b, g, r), 2);
+                cv::circle(featureImg,
+                           cv::Point2d(currentPixel(0, 0),
+                                       currentPixel(1, 0) + colorImg.rows),
+                           8, cv::Scalar(b, g, r), 2);
+                cv::line(featureImg,
+                         cv::Point2d(prevPixel(0, 0), prevPixel(1, 0)),
+                         cv::Point2d(currentPixel(0, 0),
+                                     currentPixel(1, 0) + colorImg.rows),
+                         cv::Scalar(b, g, r), 1);
+            } else if (methodType == MethodType::DIRECT_SEMI_SPARSE){
+                float b = 0;
+                float g = 250;
+                float r = 0;
+                int baseIdx = int(prevPixel(0, 0)) * 3;
+                featureImg.ptr<uchar>(prevPixel(1, 0))[baseIdx] = b;
+                featureImg.ptr<uchar>(prevPixel(1, 0))[baseIdx + 1] = g;
+                featureImg.ptr<uchar>(prevPixel(1, 0))[baseIdx + 2] = r;
+                featureImg.ptr<uchar>(currentPixel(1, 0) +
+                                      colorImg.rows)[baseIdx] = b;
+                featureImg.ptr<uchar>(currentPixel(1, 0) +
+                                      colorImg.rows)[baseIdx + 1] = g;
+                featureImg.ptr<uchar>(currentPixel(1, 0) +
+                                      colorImg.rows)[baseIdx + 2] = r;
+                cv::circle(featureImg,
+                           cv::Point2d(prevPixel(0, 0), prevPixel(1, 0)), 4,
+                           cv::Scalar(b, g, r), 2);
+                cv::circle(
+                    featureImg,
+                    cv::Point2d(currentPixel(0, 0), currentPixel(1, 0) + colorImg.rows),
+                    4, cv::Scalar(b, g, r), 2);
+            }
         }
         cv::imshow(cCvWindow, featureImg);
         CV_WAIT;
