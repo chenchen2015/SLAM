@@ -9,9 +9,9 @@ class Camera {
     using Ptr = std::shared_ptr<Camera>;
     // camera
     float fx_, fy_, cx_, cy_, depthScale_;
-    
+
     // constructors
-    Camera();
+    Camera() = default;
     Camera(float fx, float fy, float cx, float cy, float depthScale = 0)
         : fx_(fx), fy_(fy), cx_(cx), cy_(cy), depthScale(depthScale_) {}
 
