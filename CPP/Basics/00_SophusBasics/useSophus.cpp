@@ -19,8 +19,8 @@ int main( int argc, char** argv )
     Eigen::Quaterniond q(R);  // construct from quaternion
     Sophus::SO3d SO3_q(q);
     // show the constructed SO3 objects
-    cout << "SO(3) from matrix:\n" << SO3_R.params() << endl;
-    cout << "SO(3) from quaternion:\n" << SO3_q.params() << endl;
+    cout << "SO(3) from matrix:\n" << SO3_R.log() << endl;
+    cout << "SO(3) from quaternion:\n" << SO3_q.log() << endl;
 
     // use logarithmic map to get the Lie algebra representation
     Eigen::Vector3d so3 = SO3_R.log();
@@ -29,14 +29,16 @@ int main( int argc, char** argv )
     // https://github.com/strasdat/Sophus/blob/master/sophus/so3.hpp#L661
     cout << "so3 hat =\n" << Sophus::SO3d::hat(so3) << endl;
     // vee maps to the jvector representation of Lie algebra
+    // https://github.com/strasdat/Sophus/blob/master/sophus/so3.hpp#L742
     cout << "so3 hat vee = "
          << Sophus::SO3d::vee(Sophus::SO3d::hat(so3)).transpose() << endl;
 
-    // // 增量扰动模型的更新
-    // Eigen::Vector3d update_so3(1e-4, 0, 0); //假设更新量为这么多
-    // Sophus::SO3 SO3_updated = Sophus::SO3::exp(update_so3)*SO3_R;
-    // cout<<"SO3 updated = "<<SO3_updated<<endl;
-    
+    // update the increment disturbance model
+    // exp() https://github.com/strasdat/Sophus/blob/master/sophus/so3.hpp#L568
+    Eigen::Vector3d update_so3(1e-4, 0, 0);
+    Sophus::SO3d SO3_updated = Sophus::SO3d::exp(update_so3) * SO3_R;
+    cout << "SO3 updated = \n" << SO3_updated.log() << endl;
+
     // /********************萌萌的分割线*****************************/
     // cout<<"************我是分割线*************"<<endl;
     // // 对SE(3)操作大同小异
