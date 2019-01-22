@@ -20,3 +20,10 @@ using cv::Mat;
 #include <unordered_map>
 #include <vector>
 using namespace std;
+
+// forware declarations
+namespace xslam {
+class Camera;
+class MapPoint;
+class Frame;
+}  // namespace xslam
