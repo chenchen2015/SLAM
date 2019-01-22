@@ -16,7 +16,7 @@ class Frame {
     Mat colorImg_, depthImg_;  // color and depth image
 
     // constructors
-    Frame() = default;
+    Frame() : id_(-1), timeStamp_(-1), pCamera_(nullptr) = default;
     Frame(long id, double timeStamp = 0, SE3 Tcw = SE3(),
           Camera::Ptr pCamera = nullptr, Mat colorImg = Mat(),
           Mat depthImg = Mat());
