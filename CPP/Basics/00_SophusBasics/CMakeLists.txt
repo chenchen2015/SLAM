@@ -9,4 +9,4 @@ find_package( Sophus REQUIRED )
 include_directories( ${Sophus_INCLUDE_DIRS} )
 
 add_executable( sophusBasics useSophus.cpp )
-target_link_libraries( sophusBasics ${Sophus_LIBS} )
+target_link_libraries( sophusBasics ${Sophus_LIBRARIES} )
