@@ -57,12 +57,12 @@ int main( int argc, char** argv )
     cout << "se3 hat vee = "
          << Sophus::SE3d::vee(Sophus::SE3d::hat(se3)).transpose() << endl;
 
-    // // 最后，演示一下更新
-    // Vector6d update_se3; //更新量
-    // update_se3.setZero();
-    // update_se3(0,0) = 1e-4d;
-    // Sophus::SE3 SE3_updated = Sophus::SE3::exp(update_se3)*SE3_Rt;
-    // cout<<"SE3 updated = "<<endl<<SE3_updated.matrix()<<endl;
-    
+    // updating the se(3) object is similar to so(3)
+    Vector6d update_se3;
+    update_se3.setZero();
+    update_se3(0, 0) = 1e-4d;
+    Sophus::SE3d SE3_updated = Sophus::SE3d::exp(update_se3) * SE3_Rt;
+    cout << "SE3 updated = " << endl << SE3_updated.matrix() << endl;
+
     return 0;
 }
