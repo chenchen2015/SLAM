@@ -19,13 +19,13 @@ int main( int argc, char** argv )
     Eigen::Quaterniond q(R);  // construct from quaternion
     Sophus::SO3d SO3_q(q);
     // show the constructed SO3 objects
-    cout << "SO(3) from matrix:\n" << SO3_R.log() << endl;
-    cout << "SO(3) from quaternion:\n" << SO3_q.log() << endl;
+    cout << "SO(3) from matrix:\n" << SO3_R.matrix() << endl;
+    cout << "SO(3) from quaternion:\n" << SO3_q.matrix() << endl;
 
     // use logarithmic map to get the Lie algebra representation
     Eigen::Vector3d so3 = SO3_R.log();
     cout << "so3 = " << so3.transpose() << endl;
-    // hat converts to matrix representation of Lie algebra element]
+    // hat converts to matrix representation of Lie algebra element
     // https://github.com/strasdat/Sophus/blob/master/sophus/so3.hpp#L661
     cout << "so3 hat =\n" << Sophus::SO3d::hat(so3) << endl;
     // vee maps to the jvector representation of Lie algebra
@@ -37,25 +37,26 @@ int main( int argc, char** argv )
     // exp() https://github.com/strasdat/Sophus/blob/master/sophus/so3.hpp#L568
     Eigen::Vector3d update_so3(1e-4, 0, 0);
     Sophus::SO3d SO3_updated = Sophus::SO3d::exp(update_so3) * SO3_R;
-    cout << "SO3 updated = \n" << SO3_updated.log() << endl;
+    cout << "SO3 updated = \n" << SO3_updated.matrix() << endl;
 
-    // /********************萌萌的分割线*****************************/
-    // cout<<"************我是分割线*************"<<endl;
-    // // 对SE(3)操作大同小异
-    // Eigen::Vector3d t(1,0,0);           // 沿X轴平移1
-    // Sophus::SE3 SE3_Rt(R, t);           // 从R,t构造SE(3)
-    // Sophus::SE3 SE3_qt(q,t);            // 从q,t构造SE(3)
-    // cout<<"SE3 from R,t= "<<endl<<SE3_Rt<<endl;
-    // cout<<"SE3 from q,t= "<<endl<<SE3_qt<<endl;
-    // // 李代数se(3) 是一个六维向量，方便起见先typedef一下
-    // typedef Eigen::Matrix<double,6,1> Vector6d;
-    // Vector6d se3 = SE3_Rt.log();
-    // cout<<"se3 = "<<se3.transpose()<<endl;
-    // // 观察输出，会发现在Sophus中，se(3)的平移在前，旋转在后.
-    // // 同样的，有hat和vee两个算符
-    // cout<<"se3 hat = "<<endl<<Sophus::SE3::hat(se3)<<endl;
-    // cout<<"se3 hat vee = "<<Sophus::SE3::vee( Sophus::SE3::hat(se3) ).transpose()<<endl;
-    
+    cout << "\n************ SE3 group tests *************\n" << endl;
+    // SE3 shares similar API with SO3
+    Eigen::Vector3d t(1, 0, 0);   // translate 1 unit along X
+    Sophus::SE3d SE3_Rt(R, t);    // construct SE(3) from R, t
+    Sophus::SE3d SE3_qt(q, t);    // construct SE(3) from q, t
+    cout << "SE3 from R, t = " << endl << SE3_Rt.matrix() << endl;
+    cout << "\nSE3 from q, t = " << endl << SE3_qt.matrix() << endl;
+    // se(3) Lie algebra elements are represented in a Vector6d
+    using Vector6d = Eigen::Matrix<double, 6, 1>;
+    Vector6d se3 = SE3_Rt.log();
+    cout << "se3 = " << se3.transpose() << endl;
+    // in Sophus, se(3) has the translation on the left and 
+    // rotation on the right
+    // and similarly, se(3) also has the hat and vee method
+    cout << "se3 hat = " << endl << Sophus::SE3d::hat(se3) << endl;
+    cout << "se3 hat vee = "
+         << Sophus::SE3d::vee(Sophus::SE3d::hat(se3)).transpose() << endl;
+
     // // 最后，演示一下更新
     // Vector6d update_se3; //更新量
     // update_se3.setZero();
