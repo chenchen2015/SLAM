@@ -14,8 +14,18 @@ class MapPoint {
     int correctTimes_;   // number of times being an inliner in pose estimation
 
     // constructors
-    MapPoint() = default;
-    MapPoint(long id, Vector3d position, Vector3d norm);
+    MapPoint()
+        : id_(-1),
+          pos_(Vector3d(0, 0, 0)),
+          norm_(Vector3d(0, 0, 0)),
+          observedTimes_(0),
+          correctTimes_(0) = default;
+    MapPoint(long id, Vector3d position, Vector3d norm)
+        : id_(id),
+          pos_(position),
+          norm_(norm),
+          observedTimes_(0),
+          correctTimes_(0) = default;
 
     // factory method
     static MapPoint::Ptr createNewMapPoint();
