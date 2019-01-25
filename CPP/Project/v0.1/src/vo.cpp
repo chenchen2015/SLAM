@@ -78,11 +78,11 @@ bool VisualOdometry::addFrame(Frame::Ptr frame) {
 }
 
 void VisualOdometry::extractKeyPoints() {
-    orb_->detect(curr_->color_, keypointsCurr_);
+    orb_->detect(curr_->colorImg_, keyPointsCurr_);
 }
 
 void VisualOdometry::computeDescriptors() {
-    orb_->compute(curr_->color_, keypointsCurr_, descriptorsCurr_);
+    orb_->compute(curr_->colorImg_, keyPointsCurr_, descriptorsCurr_);
 }
 
 void VisualOdometry::featureMatching() {
@@ -98,24 +98,24 @@ void VisualOdometry::featureMatching() {
                          })
             ->distance;
 
-    feature_matches_.clear();
+    featureMatches_.clear();
     for (cv::DMatch& m : matches) {
-        if (m.distance < max<float>(min_dis * match_ratio_, 30.0)) {
-            feature_matches_.push_back(m);
+        if (m.distance < max<float>(min_dis * matchRatio_, 30.0)) {
+            featureMatches_.push_back(m);
         }
     }
-    printf("[VO]: found %ld good matches\n", feature_matches_.size());
+    printf("[VO]: found %ld good matches\n", featureMatches_.size());
 }
 
 void VisualOdometry::setRef3DPoints() {
     // select the features with depth measurements
     pts3dRef_.clear();
     descriptorsRef_ = Mat();
-    for (size_t i = 0; i < keypointsCurr_.size(); i++) {
-        double d = ref_->findDepth(keypointsCurr_[i]);
+    for (size_t i = 0; i < keyPointsCurr_.size(); i++) {
+        double d = ref_->findDepth(keyPointsCurr_[i]);
         if (d > 0) {
-            Vector3d ptCam = ref_->camera_->pixel2camera(
-                Vector2d(keypointsCurr_[i].pt.x, keypointsCurr_[i].pt.y), d);
+            Vector3d ptCam = ref_->pCamera_->pixel2camera(
+                Vector2d(keyPointsCurr_[i].pt.x, keyPointsCurr_[i].pt.y), d);
             pts3dRef_.push_back(
                 cv::Point3f(ptCam(0, 0), ptCam(1, 0), ptCam(2, 0)));
             descriptorsRef_.push_back(descriptorsCurr_.row(i));
@@ -128,23 +128,28 @@ void VisualOdometry::poseEstimationPnP() {
     vector<cv::Point3f> pts3d;
     vector<cv::Point2f> pts2d;
 
-    for (cv::DMatch m : feature_matches_) {
+    for (cv::DMatch m : featureMatches_) {
         pts3d.push_back(pts3dRef_[m.queryIdx]);
-        pts2d.push_back(keypointsCurr_[m.trainIdx].pt);
+        pts2d.push_back(keyPointsCurr_[m.trainIdx].pt);
     }
 
     Mat K =
-        (cv::Mat_<double>(3, 3) << ref_->camera_->fx_, 0, ref_->camera_->cx_, 0,
-         ref_->camera_->fy_, ref_->camera_->cy_, 0, 0, 1);
+        (cv::Mat_<double>(3, 3) << ref_->pCamera_->fx_, 0, ref_->pCamera_->cx_,
+         0, ref_->pCamera_->fy_, ref_->pCamera_->cy_, 0, 0, 1);
     Mat rvec, tvec, inliers;
     cv::solvePnPRansac(pts3d, pts2d, K, Mat(), rvec, tvec, false, 100, 4.0,
                        0.99, inliers);
     nInliers_ = inliers.rows;
     printf("[VO]: found %d inliers\n", nInliers_);
-    TcrHat_ = SE3(SO3(rvec.at<double>(0, 0), rvec.at<double>(1, 0),
-                      rvec.at<double>(2, 0)),
-                  Vector3d(tvec.at<double>(0, 0), tvec.at<double>(1, 0),
-                           tvec.at<double>(2, 0)));
+    // convert rotation vector [rotVec] to rotation matrix [Rot]
+    // use the Rodrigues formula
+    cv::Mat rot;
+    cv::Rodrigues(rvec, rot);
+    Eigen::Matrix3d rotEigen;
+    cv::cv2eigen(rot, rotEigen);
+    TcrHat_ =
+        SE3(rotEigen, Vector3d(tvec.at<double>(0, 0), tvec.at<double>(1, 0),
+                               tvec.at<double>(2, 0)));
 }
 
 bool VisualOdometry::checkEstimatedPose() {

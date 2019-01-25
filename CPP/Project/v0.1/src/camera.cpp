@@ -1,6 +1,6 @@
 #include <xslam/camera.h>
 
-namespace xslam{
+namespace xslam {
 Vector3d Camera::world2camera(const Vector3d& p_w, const SE3& T_c_w) {
     return T_c_w * p_w;
 }
@@ -27,4 +27,4 @@ Vector3d Camera::pixel2world(const Vector2d& p_p, const SE3& T_c_w,
                              double depth) {
     return camera2world(pixel2camera(p_p, depth), T_c_w);
 }
-}
+}  // namespace xslam

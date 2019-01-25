@@ -7,9 +7,12 @@ using Eigen::Vector2d;
 using Eigen::Vector3d;
 // Sophus
 #include <sophus/se3.hpp>
+#include <sophus/so3.hpp>
+using SO3 = Sophus::SO3d;
 using SE3 = Sophus::SE3d;
 // OpenCV
 #include <opencv2/core/core.hpp>
+#include <opencv2/core/eigen.hpp>
 using cv::Mat;
 // STL
 #include <iostream>
