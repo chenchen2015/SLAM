@@ -4,7 +4,6 @@ project ( xSLAM )
 set( CMAKE_CXX_COMPILER "clang++" )
 ## configure build
 set( CMAKE_BUILD_TYPE Release )
-add_compile_options(-std=c++11)
 # Optimization flag, (low) O1 -> O3 (high)
 set( CMAKE_CXX_FLAGS "-std=c++11 -march=native -O3" )
 # generate compile commands

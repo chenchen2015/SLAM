@@ -21,9 +21,13 @@ using cv::Mat;
 #include <vector>
 using namespace std;
 
-// forware declarations
 namespace xslam {
+
+// forware declarations
 class Camera;
 class MapPoint;
 class Frame;
+class Map;
+class VisualOdometry;
+
 }  // namespace xslam
