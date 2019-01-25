@@ -6,7 +6,7 @@
 using Eigen::Vector2d;
 using Eigen::Vector3d;
 // Sophus
-#include <sophus/se3.h>
+#include <sophus/se3.hpp>
 using SE3 = Sophus::SE3d;
 // OpenCV
 #include <opencv2/core/core.hpp>

@@ -12,7 +12,7 @@ double Frame::findDepth(const cv::KeyPoint& kp) {
     int y = cvRound(kp.pt.y);
     ushort d = depthImg_.ptr<ushort>(y)[x];
     if (d != 0) {
-        return double(d) / pCamera_->depth_scale_;
+        return double(d) / pCamera_->depthScale_;
     } else {
         // check the nearby points
         int dx[4] = {-1, 0, 1, 0};
@@ -20,7 +20,7 @@ double Frame::findDepth(const cv::KeyPoint& kp) {
         for (int i = 0; i < 4; i++) {
             d = depthImg_.ptr<ushort>(y + dy[i])[x + dx[i]];
             if (d != 0) {
-                return double(d) / pCamera_->depth_scale_;
+                return double(d) / pCamera_->depthScale_;
             }
         }
     }

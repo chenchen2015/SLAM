@@ -6,7 +6,7 @@ set( CMAKE_CXX_COMPILER "clang++" )
 set( CMAKE_BUILD_TYPE Release )
 add_compile_options(-std=c++11)
 # Optimization flag, (low) O1 -> O3 (high)
-set( CMAKE_CXX_FLAGS_RELEASE "native -O3" )
+set( CMAKE_CXX_FLAGS "-std=c++11 -march=native -O3" )
 # generate compile commands
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
 
@@ -16,8 +16,10 @@ set( LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib )
 ############### dependencies ######################
 # Eigen
 find_package( Eigen3 REQUIRED )
+include_directories( ${EIGEN3_INCLUDE_DIRS} )
+
 # OpenCV
-find_package( OpenCV MINIMUM 3 REQUIRED )
+find_package( OpenCV REQUIRED )
 include_directories( ${OpenCV_INCLUDE_DIRS} )
 # Sophus 
 find_package( Sophus REQUIRED )

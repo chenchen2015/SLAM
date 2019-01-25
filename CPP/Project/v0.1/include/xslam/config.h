@@ -11,9 +11,12 @@ class Config {
     static std::shared_ptr<Config> config_;
     cv::FileStorage file_;
 
+    // private constructor makes a singleton
+    Config() = default;
+
    public:
-    Config() = delete;  // delete constructor makes a singleton
-    ~Config();          // close the file when deconstructing
+    // destructor
+    ~Config();
 
     // set a new config file
     static void setParameterFile(const std::string& filename);

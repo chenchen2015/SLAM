@@ -8,6 +8,6 @@ add_library( xSLAM SHARED
 )
 
 # ${THIRD_PARTY_LIBS} defined in 
-target_link_libraries( myslam
+target_link_libraries( xSLAM
     ${THIRD_PARTY_LIBS}
 )
