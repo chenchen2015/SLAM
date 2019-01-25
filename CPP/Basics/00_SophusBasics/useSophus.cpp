@@ -28,7 +28,7 @@ int main( int argc, char** argv )
     // hat converts to matrix representation of Lie algebra element
     // https://github.com/strasdat/Sophus/blob/master/sophus/so3.hpp#L661
     cout << "so3 hat =\n" << Sophus::SO3d::hat(so3) << endl;
-    // vee maps to the jvector representation of Lie algebra
+    // vee maps to the vector representation of Lie algebra
     // https://github.com/strasdat/Sophus/blob/master/sophus/so3.hpp#L742
     cout << "so3 hat vee = "
          << Sophus::SO3d::vee(Sophus::SO3d::hat(so3)).transpose() << endl;

@@ -24,7 +24,7 @@ class Frame {
     ~Frame() = default;
 
     // factory method
-    static Frame::Ptr createNewFrame();
+    static Frame::Ptr createFrame();
 
     // find depth in depth map
     double findDepth(const cv::KeyPoint& kp);

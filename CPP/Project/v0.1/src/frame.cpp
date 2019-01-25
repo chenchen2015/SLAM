@@ -2,7 +2,7 @@
 
 namespace xslam {
 
-Frame::Ptr Frame::createNewFrame() {
+Frame::Ptr Frame::createFrame() {
     static long factoryId = 0;
     return Frame::Ptr(new Frame(factoryId++));
 }

@@ -5,6 +5,7 @@ add_library( xSLAM SHARED
     map.cpp
     camera.cpp
     config.cpp
+    vo.cpp
 )
 
 # ${THIRD_PARTY_LIBS} defined in 

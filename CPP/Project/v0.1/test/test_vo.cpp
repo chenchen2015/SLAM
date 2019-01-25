@@ -57,26 +57,26 @@ int main(int argc, char** argv) {
         Mat depth = cv::imread(depthFiles[i], -1);
         if (color.data == nullptr || depth.data == nullptr) break;
         xslam::Frame::Ptr pFrame = xslam::Frame::createFrame();
-        pFrame->camera_ = camera;
-        pFrame->color_ = color;
-        pFrame->depth_ = depth;
-        pFrame->time_stamp_ = rgbTimes[i];
+        pFrame->pCamera_ = camera;
+        pFrame->colorImg_ = color;
+        pFrame->depthImg_ = depth;
+        pFrame->timeStamp_ = rgbTimes[i];
 
         boost::timer timer;
         vo->addFrame(pFrame);
         cout << "VO costs time: " << timer.elapsed() << endl;
 
         if (vo->state_ == xslam::VisualOdometry::LOST) break;
-        SE3 Tcw = pFrame->T_c_w_.inverse();
+        SE3 Tcw = pFrame->Tcw_.inverse();
 
         // show the map and the camera pose
         cv::Affine3d M(
             cv::Affine3d::Mat3(
-                Tcw.rotation_matrix()(0, 0), Tcw.rotation_matrix()(0, 1),
-                Tcw.rotation_matrix()(0, 2), Tcw.rotation_matrix()(1, 0),
-                Tcw.rotation_matrix()(1, 1), Tcw.rotation_matrix()(1, 2),
-                Tcw.rotation_matrix()(2, 0), Tcw.rotation_matrix()(2, 1),
-                Tcw.rotation_matrix()(2, 2)),
+                Tcw.rotationMatrix()(0, 0), Tcw.rotationMatrix()(0, 1),
+                Tcw.rotationMatrix()(0, 2), Tcw.rotationMatrix()(1, 0),
+                Tcw.rotationMatrix()(1, 1), Tcw.rotationMatrix()(1, 2),
+                Tcw.rotationMatrix()(2, 0), Tcw.rotationMatrix()(2, 1),
+                Tcw.rotationMatrix()(2, 2)),
             cv::Affine3d::Vec3(Tcw.translation()(0, 0), Tcw.translation()(1, 0),
                                Tcw.translation()(2, 0)));
 
