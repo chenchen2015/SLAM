@@ -1,10 +1,11 @@
-// OpenCV
 #include <algorithm>
 #include <boost/timer.hpp>
+
+// OpenCV
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-
+// xSLAM
 #include "xslam/config.h"
 #include "xslam/vo.h"
 
@@ -47,14 +48,13 @@ bool VisualOdometry::addFrame(Frame::Ptr frame) {
             computeDescriptors();
             featureMatching();
             poseEstimationPnP();
-            if (checkEstimatedPose() )  // a good estimation
+            if (checkEstimatedPose())  // a good estimation
             {
-                curr_->Tcw_ =
-                    TcrHat_ * ref_->Tcw_;  // T_c_w = T_c_r*T_r_w
+                curr_->Tcw_ = TcrHat_ * ref_->Tcw_;  // Tcw = Tcr * Trw
                 ref_ = curr_;
                 setRef3DPoints();
                 nLost_ = 0;
-                if (checkKeyFrame() )  // is a key-frame
+                if (checkKeyFrame())  // is a key-frame
                 {
                     addKeyFrame();
                 }
@@ -69,7 +69,7 @@ bool VisualOdometry::addFrame(Frame::Ptr frame) {
             break;
         }
         case LOST: {
-            cout << "vo has lost." << endl;
+            cout << "[VO]: tracking lost" << endl;
             break;
         }
     }
@@ -104,7 +104,7 @@ void VisualOdometry::featureMatching() {
             feature_matches_.push_back(m);
         }
     }
-    cout << "good matches: " << feature_matches_.size() << endl;
+    printf("[VO]: found %ld good matches\n", feature_matches_.size());
 }
 
 void VisualOdometry::setRef3DPoints() {
@@ -140,24 +140,25 @@ void VisualOdometry::poseEstimationPnP() {
     cv::solvePnPRansac(pts3d, pts2d, K, Mat(), rvec, tvec, false, 100, 4.0,
                        0.99, inliers);
     nInliers_ = inliers.rows;
-    cout << "PnP inliers: " << nInliers_ << endl;
-    TcrHat_ =
-        SE3(SO3(rvec.at<double>(0, 0), rvec.at<double>(1, 0),
-                rvec.at<double>(2, 0)),
-            Vector3d(tvec.at<double>(0, 0), tvec.at<double>(1, 0),
-                     tvec.at<double>(2, 0)));
+    printf("[VO]: found %d inliers\n", nInliers_);
+    TcrHat_ = SE3(SO3(rvec.at<double>(0, 0), rvec.at<double>(1, 0),
+                      rvec.at<double>(2, 0)),
+                  Vector3d(tvec.at<double>(0, 0), tvec.at<double>(1, 0),
+                           tvec.at<double>(2, 0)));
 }
 
 bool VisualOdometry::checkEstimatedPose() {
     // check if the estimated pose is good
     if (nInliers_ < nMinInliers_) {
-        cout << "reject because inlier is too small: " << nInliers_ << endl;
+        cout << "[VO]: estimated pose rejected, too few inliers, n = "
+             << nInliers_ << endl;
         return false;
     }
     // if the motion is too large, it is probably wrong
     Sophus::Vector6d d = TcrHat_.log();
     if (d.norm() > 5.0) {
-        cout << "reject because motion is too large: " << d.norm() << endl;
+        cout << "[VO]: estimated pose rejected, motion too large, norm = "
+             << d.norm() << endl;
         return false;
     }
     return true;
@@ -173,7 +174,7 @@ bool VisualOdometry::checkKeyFrame() {
 }
 
 void VisualOdometry::addKeyFrame() {
-    cout << "adding a key-frame" << endl;
+    cout << "[VO]: adding a keyframe" << endl;
     map_->insertKeyFrame(curr_);
 }
 
