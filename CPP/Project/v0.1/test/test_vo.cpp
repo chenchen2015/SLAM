@@ -11,8 +11,6 @@
 #include "xslam/vo.h"
 
 int main(int argc, char** argv) {
-    cv::FileStorage fs("../config/default.yaml", cv::FileStorage::READ);
-
     xslam::Config::setParameterFile("../config/default.yaml");
     xslam::VisualOdometry::Ptr vo(new xslam::VisualOdometry);
 

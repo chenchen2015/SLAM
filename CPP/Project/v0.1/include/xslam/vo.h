@@ -10,6 +10,7 @@ namespace xslam {
 
 class VisualOdometry {
    public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     using Ptr = shared_ptr<VisualOdometry>;
     enum VOState { INITIALIZING = -1, OK = 0, LOST };
 
