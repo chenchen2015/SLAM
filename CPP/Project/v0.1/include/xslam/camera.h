@@ -1,6 +1,7 @@
 #pragma once
 
 #include "xslam/xslam.h"
+#include <xslam/config.h>
 
 namespace xslam {
     
@@ -12,7 +13,7 @@ class Camera {
     float fx_, fy_, cx_, cy_, depthScale_;
 
     // constructors
-    Camera() = default;
+    Camera();
     Camera(float fx, float fy, float cx, float cy, float depthScale = 0)
         : fx_(fx), fy_(fy), cx_(cx), cy_(cy), depthScale_(depthScale) {}
 

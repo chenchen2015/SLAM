@@ -65,7 +65,7 @@ int main(int argc, char** argv) {cv::FileStorage fs("../config/default.yaml", cv
 
         boost::timer timer;
         vo->addFrame(pFrame);
-        cout << "VO costs time: " << timer.elapsed() << endl;
+        printf("[VO]: time used %.2f ms\n", timer.elapsed() * 100.0f);
 
         if (vo->state_ == xslam::VisualOdometry::LOST) break;
         SE3 Tcw = pFrame->Tcw_.inverse();
@@ -82,7 +82,7 @@ int main(int argc, char** argv) {cv::FileStorage fs("../config/default.yaml", cv
                                Tcw.translation()(2, 0)));
 
         cv::imshow("image", color);
-        cv::waitKey(1);
+        cv::waitKey(0);
         vis.setWidgetPose("Camera", M);
         vis.spinOnce(1, false);
     }

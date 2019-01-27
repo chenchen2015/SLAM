@@ -128,7 +128,7 @@ void VisualOdometry::poseEstimationPnP() {
     vector<cv::Point3f> pts3d;
     vector<cv::Point2f> pts2d;
 
-    for (cv::DMatch m : featureMatches_) {
+    for (const auto& m : featureMatches_) {
         pts3d.push_back(pts3dRef_[m.queryIdx]);
         pts2d.push_back(keyPointsCurr_[m.trainIdx].pt);
     }
