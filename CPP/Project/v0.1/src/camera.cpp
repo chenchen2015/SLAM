@@ -1,4 +1,5 @@
 #include <xslam/camera.h>
+#include <xslam/config.h>
 
 namespace xslam {
 
@@ -8,6 +9,7 @@ Camera::Camera() {
     cx_ = Config::get<float>("camera.cx");
     cy_ = Config::get<float>("camera.cy");
     depthScale_ = Config::get<float>("camera.depth_scale");
+    K = (cv::Mat_<double>(3, 3) << fx_, 0, cx_, fy_, cy_, 0, 0, 1);
 }
 
 Vector3d Camera::world2camera(const Vector3d& p_w, const SE3& T_c_w) {
@@ -36,4 +38,5 @@ Vector3d Camera::pixel2world(const Vector2d& p_p, const SE3& T_c_w,
                              double depth) {
     return camera2world(pixel2camera(p_p, depth), T_c_w);
 }
+
 }  // namespace xslam

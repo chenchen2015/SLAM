@@ -13,7 +13,7 @@ void Map::insertKeyFrame(Frame::Ptr frame) {
 
 void Map::insertMapPoint(MapPoint::Ptr mp) {
     if (mapPoints_.find(mp->id_) == mapPoints_.end()) {
-        mapPoints_.insert({mp->id_, mp});
+        mapPoints_.insert(make_pair(mp->id_, mp));
     } else {
         mapPoints_[mp->id_] = mp;
     }

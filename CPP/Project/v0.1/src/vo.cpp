@@ -132,24 +132,22 @@ void VisualOdometry::poseEstimationPnP() {
         pts3d.push_back(pts3dRef_[m.queryIdx]);
         pts2d.push_back(keyPointsCurr_[m.trainIdx].pt);
     }
-
-    Mat K =
-        (cv::Mat_<double>(3, 3) << ref_->pCamera_->fx_, 0, ref_->pCamera_->cx_,
-         0, ref_->pCamera_->fy_, ref_->pCamera_->cy_, 0, 0, 1);
     Mat rvec, tvec, inliers;
-    cv::solvePnPRansac(pts3d, pts2d, K, Mat(), rvec, tvec, false, 100, 4.0,
-                       0.99, inliers);
+    cv::solvePnPRansac(pts3d, pts2d, ref_->pCamera_->K, Mat(), rvec, tvec,
+                       false, 100, 4.0, 0.99, inliers);
     nInliers_ = inliers.rows;
     printf("[VO]: found %d inliers\n", nInliers_);
     // convert rotation vector [rotVec] to rotation matrix [Rot]
     // use the Rodrigues formula
-    cv::Mat rot;
-    cv::Rodrigues(rvec, rot);
-    Eigen::Matrix3d rotEigen;
-    cv::cv2eigen(rot, rotEigen);
-    TcrHat_ =
-        SE3(rotEigen, Vector3d(tvec.at<double>(0, 0), tvec.at<double>(1, 0),
-                               tvec.at<double>(2, 0)));
+    //Eigen::Matrix3d rotEigen;
+    //cv::cv2eigen(rot, rotEigen);
+    Eigen::Quaterniond q =
+        Eigen::AngleAxisd(rvec.at<double>(0, 0), Vector3d::UnitX()) *
+        Eigen::AngleAxisd(rvec.at<double>(1, 0), Vector3d::UnitY()) *
+        Eigen::AngleAxisd(rvec.at<double>(2, 0), Vector3d::UnitZ());
+
+    TcrHat_ = SE3(SO3(q), Vector3d(tvec.at<double>(0, 0), tvec.at<double>(1, 0),
+                                   tvec.at<double>(2, 0)));
 }
 
 bool VisualOdometry::checkEstimatedPose() {

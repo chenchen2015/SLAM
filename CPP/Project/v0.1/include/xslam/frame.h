@@ -9,6 +9,7 @@ namespace xslam {
 
 class Frame {
    public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     using Ptr = std::shared_ptr<Frame>;
     unsigned long id_;         // frame id
     double timeStamp_;         // timestamp

@@ -10,7 +10,8 @@
 #include "xslam/config.h"
 #include "xslam/vo.h"
 
-int main(int argc, char** argv) {cv::FileStorage fs("../config/default.yaml", cv::FileStorage::READ);
+int main(int argc, char** argv) {
+    cv::FileStorage fs("../config/default.yaml", cv::FileStorage::READ);
 
     xslam::Config::setParameterFile("../config/default.yaml");
     xslam::VisualOdometry::Ptr vo(new xslam::VisualOdometry);
@@ -19,8 +20,7 @@ int main(int argc, char** argv) {cv::FileStorage fs("../config/default.yaml", cv
     cout << "dataset: " << dataPath << endl;
     ifstream fin(dataPath + "/associate.txt");
     if (!fin) {
-        cout << "[VO Test]: cannot open associate.txt!"
-             << endl;
+        cout << "[VO Test]: cannot open associate.txt!" << endl;
         return 1;
     }
 
@@ -41,8 +41,7 @@ int main(int argc, char** argv) {cv::FileStorage fs("../config/default.yaml", cv
     // visualization
     cv::viz::Viz3d vis("Visual Odometry");
     cv::viz::WCoordinateSystem worldCoordSys(1.0), cameraCoordSys(0.5);
-    cv::Point3d camPos(0, -1.0, -1.0), camFocalPoint(0, 0, 0),
-        camYDir(0, 1, 0);
+    cv::Point3d camPos(0, -1.0, -1.0), camFocalPoint(0, 0, 0), camYDir(0, 1, 0);
     cv::Affine3d camPose =
         cv::viz::makeCameraPose(camPos, camFocalPoint, camYDir);
     vis.setViewerPose(camPose);
@@ -82,10 +81,12 @@ int main(int argc, char** argv) {cv::FileStorage fs("../config/default.yaml", cv
                                Tcw.translation()(2, 0)));
 
         cv::imshow("image", color);
-        cv::waitKey(0);
+        cv::waitKey(1);
         vis.setWidgetPose("Camera", M);
         vis.spinOnce(1, false);
     }
 
-    return 0;
+    // clean up
+    cv::destroyAllWindows();
+    return EXIT_SUCCESS;
 }

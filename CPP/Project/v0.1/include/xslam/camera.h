@@ -1,21 +1,27 @@
 #pragma once
 
 #include "xslam/xslam.h"
-#include <xslam/config.h>
 
 namespace xslam {
-    
+
 // RGBD camera model
 class Camera {
    public:
     using Ptr = std::shared_ptr<Camera>;
     // camera
     float fx_, fy_, cx_, cy_, depthScale_;
+    // intrinsics
+    Mat K;
 
     // constructors
     Camera();
     Camera(float fx, float fy, float cx, float cy, float depthScale = 0)
-        : fx_(fx), fy_(fy), cx_(cx), cy_(cy), depthScale_(depthScale) {}
+        : fx_(fx),
+          fy_(fy),
+          cx_(cx),
+          cy_(cy),
+          depthScale_(depthScale),
+          K(Mat()) {}
 
     // coordinate transform: world, camera, pixel
     Vector3d world2camera(const Vector3d& p_w, const SE3& T_c_w);
