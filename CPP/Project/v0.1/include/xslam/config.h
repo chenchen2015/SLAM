@@ -12,7 +12,7 @@ class Config {
     cv::FileStorage file_;
 
     // private constructor makes a singleton
-    Config() = default;
+    Config() {}
 
    public:
     // destructor
@@ -20,6 +20,8 @@ class Config {
 
     // set a new config file
     static void setParameterFile(const std::string& filename);
+
+    static cv::FileStorage& getFile() { return config_->file_; }
 
     // access the parameter values
     template <typename T>
