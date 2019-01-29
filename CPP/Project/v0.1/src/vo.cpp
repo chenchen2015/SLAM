@@ -138,18 +138,27 @@ void VisualOdometry::poseEstimationPnP() {
 
     nInliers_ = inliers.rows;
     printf("[VO]: found %d inliers\n", nInliers_);
-    // convert rotation vector [rotVec] to rotation matrix [Rot]
-    // use the Rodrigues formula
-    Mat rot;
-    cv::Rodrigues(rvec, rot);
-    Eigen::Matrix3d rotEigen;
-    cv::cv2eigen(rot, rotEigen);
-    // Eigen::Quaterniond q =
-    //     Eigen::AngleAxisd(rvec.at<double>(0, 0), Vector3d::UnitX()) *
-    //     Eigen::AngleAxisd(rvec.at<double>(1, 0), Vector3d::UnitY()) *
-    //     Eigen::AngleAxisd(rvec.at<double>(2, 0), Vector3d::UnitZ());
+    // since SO3 no longer has the constructor from rotation vector
+    // in newer template based Sophus library
+    // there are generally two methods to pass the rotation 
+    // components to the SE3 constructor
+    // 
+    // #1 convert rotation vector [rotVec] to rotation matrix [Rot]
+    // use the Rodrigues formula and then convert to Eigen::Matrix3d
+    // to pass to SE3 constructor
+
+    //          OR
+    // #2 construct a Eigen::Quaterniond and pass to SE3 constructor
+    // Mat rot;
+    // cv::Rodrigues(rvec, rot);
+    // Eigen::Matrix3d rotEigen;
+    // cv::cv2eigen(rot, rotEigen);
+    Eigen::Quaterniond q =
+        Eigen::AngleAxisd(rvec.at<double>(0, 0), Vector3d::UnitX()) *
+        Eigen::AngleAxisd(rvec.at<double>(1, 0), Vector3d::UnitY()) *
+        Eigen::AngleAxisd(rvec.at<double>(2, 0), Vector3d::UnitZ());
     TcrHat_ =
-        SE3(SO3(rotEigen), Vector3d(tvec.at<double>(0, 0), tvec.at<double>(1, 0),
+        SE3(q, Vector3d(tvec.at<double>(0, 0), tvec.at<double>(1, 0),
                                tvec.at<double>(2, 0)));
 }
 
