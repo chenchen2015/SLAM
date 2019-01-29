@@ -78,8 +78,8 @@ int main(int argc, char** argv) {
             cv::Affine3d::Vec3(Tcw.translation()(0, 0), Tcw.translation()(1, 0),
                                Tcw.translation()(2, 0)));
 
-        cv::imshow("image", color);
-        cv::waitKey(1);
+        //cv::imshow("image", color);
+        cv::waitKey(10);
         vis.setWidgetPose("Camera", M);
         vis.spinOnce(1, false);
     }

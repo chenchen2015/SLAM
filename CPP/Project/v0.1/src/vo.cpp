@@ -135,6 +135,7 @@ void VisualOdometry::poseEstimationPnP() {
     Mat rvec, tvec, inliers;
     cv::solvePnPRansac(pts3d, pts2d, ref_->pCamera_->K, Mat(), rvec, tvec,
                        false, 100, 4.0, 0.99, inliers);
+
     nInliers_ = inliers.rows;
     printf("[VO]: found %d inliers\n", nInliers_);
     // convert rotation vector [rotVec] to rotation matrix [Rot]
