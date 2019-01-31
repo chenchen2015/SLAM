@@ -6,6 +6,7 @@ add_library( xSLAM SHARED
     camera.cpp
     config.cpp
     vo.cpp
+    g2o_types.cpp
 )
 
 # ${THIRD_PARTY_LIBS} defined in 

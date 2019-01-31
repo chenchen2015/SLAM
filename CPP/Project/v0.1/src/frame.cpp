@@ -27,6 +27,8 @@ double Frame::findDepth(const cv::KeyPoint& kp) {
     return -1.0;
 }
 
+void Frame::setPose(const SE3& Tcw) { Tcw_ = Tcw; }
+
 Vector3d Frame::getCamCenter() const { return Tcw_.inverse().translation(); }
 
 bool Frame::isInFrame(const Vector3d& ptWorld) {

@@ -10,7 +10,7 @@ namespace xslam {
 
 class VisualOdometry {
    public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     using Ptr = shared_ptr<VisualOdometry>;
     enum VOState { INITIALIZING = -1, OK = 0, LOST };
 
@@ -22,8 +22,9 @@ class VisualOdometry {
     cv::Ptr<cv::ORB> orb_;                // orb detector and computer
     vector<cv::Point3f> pts3dRef_;        // 3d points in reference frame
     vector<cv::KeyPoint> keyPointsCurr_;  // keypoints in current frame
-    Mat descriptorsCurr_;                // descriptor in current frame
-    Mat descriptorsRef_;                 // descriptor in reference frame
+    Mat descriptorsCurr_;                 // descriptor in current frame
+    Mat descriptorsRef_;                  // descriptor in reference frame
+    cv::FlannBasedMatcher matcherFlann_;  // flann matcher
     vector<cv::DMatch> featureMatches_;
 
     SE3 TcrHat_;    // the estimated pose of current frame
@@ -38,8 +39,9 @@ class VisualOdometry {
     int nMaxLost_;        // max number of continuous lost times
     int nMinInliers_;     // minimum inliers
 
-    double nMinKeyFrameRot;    // minimal rotation of two key-frames
-    double nMinKeyFrameTrans;  // minimal translation of two key-frames
+    double nMinKeyFrameRot;      // minimal rotation of two key-frames
+    double nMinKeyFrameTrans;    // minimal translation of two key-frames
+    double mappointEraseRatio_;  // portions of map points to remove
 
    public:
     // constructor and destructor

@@ -32,5 +32,9 @@ class MapPoint;
 class Frame;
 class Map;
 class VisualOdometry;
+// g2o types
+class EdgeProjectXYZRGBD;
+class EdgeProjectXYZRGBDPoseOnly;
+class EdgeProjectXYZ2UVPoseOnly;
 
 }  // namespace xslam

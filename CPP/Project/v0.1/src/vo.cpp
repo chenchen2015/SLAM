@@ -1,12 +1,12 @@
 #include <algorithm>
 #include <boost/timer.hpp>
-
 // OpenCV
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 // xSLAM
 #include "xslam/config.h"
+#include "xslam/g2o_types.h"
 #include "xslam/vo.h"
 
 namespace xslam {
@@ -17,7 +17,8 @@ VisualOdometry::VisualOdometry()
       curr_(nullptr),
       map_(new Map),
       nLost_(0),
-      nInliers_(0) {
+      nInliers_(0),
+      matcherFlann_(new cv::flann::LshIndexParams(5, 10, 2)) {
     nFeatures_ = Config::get<int>("number_of_features");
     scaleFactor_ = Config::get<double>("scale_factor");
     nPyramidLevel_ = Config::get<int>("level_pyramid");
@@ -26,6 +27,7 @@ VisualOdometry::VisualOdometry()
     nMinInliers_ = Config::get<int>("min_inliers");
     nMinKeyFrameRot = Config::get<double>("keyframe_rotation");
     nMinKeyFrameTrans = Config::get<double>("keyframe_translation");
+    mappointEraseRatio_ = Config::get<double>("map_point_erase_ratio");
     orb_ = cv::ORB::create(nFeatures_, scaleFactor_, nPyramidLevel_);
 }
 
@@ -88,10 +90,9 @@ void VisualOdometry::computeDescriptors() {
 void VisualOdometry::featureMatching() {
     // match desp_ref and desp_curr, use OpenCV's brute force match
     vector<cv::DMatch> matches;
-    cv::BFMatcher matcher(cv::NORM_HAMMING);
-    matcher.match(descriptorsRef_, descriptorsCurr_, matches);
+    matcherFlann_.match(descriptorsRef_, descriptorsCurr_, matches);
     // select the best matches
-    float min_dis =
+    float minDist =
         std::min_element(matches.begin(), matches.end(),
                          [](const cv::DMatch& m1, const cv::DMatch& m2) {
                              return m1.distance < m2.distance;
@@ -100,7 +101,7 @@ void VisualOdometry::featureMatching() {
 
     featureMatches_.clear();
     for (cv::DMatch& m : matches) {
-        if (m.distance < max<float>(min_dis * matchRatio_, 30.0)) {
+        if (m.distance < max<float>(minDist * matchRatio_, 30.0)) {
             featureMatches_.push_back(m);
         }
     }
@@ -135,14 +136,13 @@ void VisualOdometry::poseEstimationPnP() {
     Mat rvec, tvec, inliers;
     cv::solvePnPRansac(pts3d, pts2d, ref_->pCamera_->K, Mat(), rvec, tvec,
                        false, 100, 4.0, 0.99, inliers);
-
     nInliers_ = inliers.rows;
     printf("[VO]: found %d inliers\n", nInliers_);
     // since SO3 no longer has the constructor from rotation vector
     // in newer template based Sophus library
-    // there are generally two methods to pass the rotation 
+    // there are generally two methods to pass the rotation
     // components to the SE3 constructor
-    // 
+    //
     // #1 convert rotation vector [rotVec] to rotation matrix [Rot]
     // use the Rodrigues formula and then convert to Eigen::Matrix3d
     // to pass to SE3 constructor
@@ -157,9 +157,44 @@ void VisualOdometry::poseEstimationPnP() {
         Eigen::AngleAxisd(rvec.at<double>(0, 0), Vector3d::UnitX()) *
         Eigen::AngleAxisd(rvec.at<double>(1, 0), Vector3d::UnitY()) *
         Eigen::AngleAxisd(rvec.at<double>(2, 0), Vector3d::UnitZ());
+    TcrHat_ = SE3(q, Vector3d(tvec.at<double>(0, 0), tvec.at<double>(1, 0),
+                              tvec.at<double>(2, 0)));
+
+    // use bundle adjustment to optimize initial pose guess
+    using Block = g2o::BlockSolver<g2o::BlockSolverTraits<6, 2>>;
+    auto pLinearSolver =
+        g2o::make_unique<g2o::LinearSolverDense<Block::PoseMatrixType>>();
+    auto pSolver = g2o::make_unique<Block>(std::move(pLinearSolver));
+    g2o::OptimizationAlgorithmLevenberg* pSolverAlgo =
+        new g2o::OptimizationAlgorithmLevenberg(std::move(pSolver));
+    g2o::SparseOptimizer optimizer;
+    optimizer.setAlgorithm(pSolverAlgo);
+    // set vertex
+    g2o::VertexSE3Expmap* pPose = new g2o::VertexSE3Expmap();
+    pPose->setId(0);
+    pPose->setEstimate(
+        g2o::SE3Quat(TcrHat_.rotationMatrix(), TcrHat_.translation()));
+    optimizer.addVertex(pPose);
+    // add edges
+    for (int i = 0; i < inliers.rows; i++) {
+        int index = inliers.at<int>(i, 0);
+        // 3D -> 2D projection
+        EdgeProjectXYZ2UVPoseOnly* pEdge = new EdgeProjectXYZ2UVPoseOnly();
+        pEdge->setId(i);
+        pEdge->setVertex(0, pPose);
+        pEdge->camera_ = curr_->pCamera_.get();
+        pEdge->point_ =
+            Vector3d(pts3d[index].x, pts3d[index].y, pts3d[index].z);
+        pEdge->setMeasurement(Vector2d(pts2d[index].x, pts2d[index].y));
+        pEdge->setInformation(Eigen::Matrix2d::Identity());
+        optimizer.addEdge(pEdge);
+    }
+    // start optimization
+    optimizer.initializeOptimization();
+    optimizer.optimize(10);
+    // update current best
     TcrHat_ =
-        SE3(q, Vector3d(tvec.at<double>(0, 0), tvec.at<double>(1, 0),
-                               tvec.at<double>(2, 0)));
+        SE3(pPose->estimate().rotation(), pPose->estimate().translation());
 }
 
 bool VisualOdometry::checkEstimatedPose() {
