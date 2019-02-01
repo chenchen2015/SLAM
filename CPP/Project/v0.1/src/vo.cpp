@@ -33,47 +33,47 @@ VisualOdometry::VisualOdometry()
 
 bool VisualOdometry::addFrame(Frame::Ptr frame) {
     switch (state_) {
-        case INITIALIZING: {
-            state_ = OK;
-            curr_ = ref_ = frame;
-            map_->insertKeyFrame(frame);
-            // extract features from first frame
-            extractKeyPoints();
-            computeDescriptors();
-            // compute the 3d position of features in ref frame
+    case INITIALIZING: {
+        state_ = OK;
+        curr_ = ref_ = frame;
+        map_->insertKeyFrame(frame);
+        // extract features from first frame
+        extractKeyPoints();
+        computeDescriptors();
+        // compute the 3d position of features in ref frame
+        setRef3DPoints();
+        break;
+    }
+    case OK: {
+        curr_ = frame;
+        extractKeyPoints();
+        computeDescriptors();
+        featureMatching();
+        poseEstimationPnP();
+        if (checkEstimatedPose()) // a good estimation
+        {
+            curr_->Tcw_ = TcrHat_ * ref_->Tcw_; // Tcw = Tcr * Trw
+            ref_ = curr_;
             setRef3DPoints();
-            break;
-        }
-        case OK: {
-            curr_ = frame;
-            extractKeyPoints();
-            computeDescriptors();
-            featureMatching();
-            poseEstimationPnP();
-            if (checkEstimatedPose())  // a good estimation
+            nLost_ = 0;
+            if (checkKeyFrame()) // is a key-frame
             {
-                curr_->Tcw_ = TcrHat_ * ref_->Tcw_;  // Tcw = Tcr * Trw
-                ref_ = curr_;
-                setRef3DPoints();
-                nLost_ = 0;
-                if (checkKeyFrame())  // is a key-frame
-                {
-                    addKeyFrame();
-                }
-            } else  // bad estimation due to various reasons
-            {
-                nLost_++;
-                if (nLost_ > nMaxLost_) {
-                    state_ = LOST;
-                }
-                return false;
+                addKeyFrame();
             }
-            break;
+        } else // bad estimation due to various reasons
+        {
+            nLost_++;
+            if (nLost_ > nMaxLost_) {
+                state_ = LOST;
+            }
+            return false;
         }
-        case LOST: {
-            cout << "[VO]: tracking lost" << endl;
-            break;
-        }
+        break;
+    }
+    case LOST: {
+        cout << "[VO]: tracking lost" << endl;
+        break;
+    }
     }
 
     return true;
@@ -94,13 +94,13 @@ void VisualOdometry::featureMatching() {
     // select the best matches
     float minDist =
         std::min_element(matches.begin(), matches.end(),
-                         [](const cv::DMatch& m1, const cv::DMatch& m2) {
+                         [](const cv::DMatch &m1, const cv::DMatch &m2) {
                              return m1.distance < m2.distance;
                          })
             ->distance;
 
     featureMatches_.clear();
-    for (cv::DMatch& m : matches) {
+    for (cv::DMatch &m : matches) {
         if (m.distance < max<float>(minDist * matchRatio_, 30.0)) {
             featureMatches_.push_back(m);
         }
@@ -129,7 +129,7 @@ void VisualOdometry::poseEstimationPnP() {
     vector<cv::Point3f> pts3d;
     vector<cv::Point2f> pts2d;
 
-    for (const auto& m : featureMatches_) {
+    for (const auto &m : featureMatches_) {
         pts3d.push_back(pts3dRef_[m.queryIdx]);
         pts2d.push_back(keyPointsCurr_[m.trainIdx].pt);
     }
@@ -165,12 +165,12 @@ void VisualOdometry::poseEstimationPnP() {
     auto pLinearSolver =
         g2o::make_unique<g2o::LinearSolverDense<Block::PoseMatrixType>>();
     auto pSolver = g2o::make_unique<Block>(std::move(pLinearSolver));
-    g2o::OptimizationAlgorithmLevenberg* pSolverAlgo =
+    g2o::OptimizationAlgorithmLevenberg *pSolverAlgo =
         new g2o::OptimizationAlgorithmLevenberg(std::move(pSolver));
     g2o::SparseOptimizer optimizer;
     optimizer.setAlgorithm(pSolverAlgo);
     // set vertex
-    g2o::VertexSE3Expmap* pPose = new g2o::VertexSE3Expmap();
+    g2o::VertexSE3Expmap *pPose = new g2o::VertexSE3Expmap();
     pPose->setId(0);
     pPose->setEstimate(
         g2o::SE3Quat(TcrHat_.rotationMatrix(), TcrHat_.translation()));
@@ -179,7 +179,7 @@ void VisualOdometry::poseEstimationPnP() {
     for (int i = 0; i < inliers.rows; i++) {
         int index = inliers.at<int>(i, 0);
         // 3D -> 2D projection
-        EdgeProjectXYZ2UVPoseOnly* pEdge = new EdgeProjectXYZ2UVPoseOnly();
+        EdgeProjectXYZ2UVPoseOnly *pEdge = new EdgeProjectXYZ2UVPoseOnly();
         pEdge->setId(i);
         pEdge->setVertex(0, pPose);
         pEdge->camera_ = curr_->pCamera_.get();
@@ -228,4 +228,4 @@ void VisualOdometry::addKeyFrame() {
     map_->insertKeyFrame(curr_);
 }
 
-}  // namespace xslam
+} // namespace xslam

@@ -9,7 +9,7 @@
 namespace xslam {
 
 class Map {
-   public:
+  public:
     using Ptr = shared_ptr<Map>;
     // landmarks
     unordered_map<unsigned long, MapPoint::Ptr> mapPoints_;
@@ -23,4 +23,4 @@ class Map {
     void insertMapPoint(MapPoint::Ptr mp);
 };
 
-}  // namespace xslam
+} // namespace xslam
