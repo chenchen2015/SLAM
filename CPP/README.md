@@ -33,3 +33,5 @@ cmake .. -DCMAKE_BUILD_TYPE=RELEASE \
     -DOPENCV_ENABLE_NONFREE=ON \
     -DOPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules
 ```
+
+When using `cmake >= 3.11`, [CMP0072 needs to be noticed](https://cmake.org/cmake/help/git-stage/policy/CMP0072.html)
