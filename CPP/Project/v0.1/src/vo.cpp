@@ -105,7 +105,7 @@ void VisualOdometry::featureMatching() {
             featureMatches_.push_back(m);
         }
     }
-    printf("[VO]: found %ld good matches\n", featureMatches_.size());
+    printf("[VO]: found %ld good matches, ", featureMatches_.size());
 }
 
 void VisualOdometry::setRef3DPoints() {
@@ -137,7 +137,7 @@ void VisualOdometry::poseEstimationPnP() {
     cv::solvePnPRansac(pts3d, pts2d, ref_->pCamera_->K, Mat(), rvec, tvec,
                        false, 100, 4.0, 0.99, inliers);
     nInliers_ = inliers.rows;
-    printf("[VO]: found %d inliers\n", nInliers_);
+    printf("%d inliers, ", nInliers_);
     // since SO3 no longer has the constructor from rotation vector
     // in newer template based Sophus library
     // there are generally two methods to pass the rotation

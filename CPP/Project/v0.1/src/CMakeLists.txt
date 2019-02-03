@@ -1,4 +1,4 @@
-# add shared src files
+# ADD SHARED SRC FILES
 add_library( xSLAM SHARED
     frame.cpp
     mappoint.cpp
@@ -9,7 +9,7 @@ add_library( xSLAM SHARED
     g2o_types.cpp
 )
 
-# ${THIRD_PARTY_LIBS} defined in 
+# ${THIRD_PARTY_LIBS} defined in
 target_link_libraries( xSLAM
     ${THIRD_PARTY_LIBS}
 )

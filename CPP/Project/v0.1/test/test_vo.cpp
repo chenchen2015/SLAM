@@ -10,7 +10,7 @@
 #include "xslam/config.h"
 #include "xslam/vo.h"
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     xslam::Config::setParameterFile("../config/default.yaml");
     xslam::VisualOdometry::Ptr vo(new xslam::VisualOdometry);
 
@@ -32,7 +32,8 @@ int main(int argc, char** argv) {
         depthTimes.push_back(atof(depthTime.c_str()));
         rgbFiles.push_back(dataPath + "/" + rgbFile);
         depthFiles.push_back(dataPath + "/" + depthFile);
-        if (fin.good() == false) break;
+        if (fin.good() == false)
+            break;
     }
     xslam::Camera::Ptr camera(new xslam::Camera);
 
@@ -53,7 +54,8 @@ int main(int argc, char** argv) {
     for (int i = 0; i < rgbFiles.size(); i++) {
         Mat color = cv::imread(rgbFiles[i]);
         Mat depth = cv::imread(depthFiles[i], -1);
-        if (color.data == nullptr || depth.data == nullptr) break;
+        if (color.data == nullptr || depth.data == nullptr)
+            break;
         xslam::Frame::Ptr pFrame = xslam::Frame::createFrame();
         pFrame->pCamera_ = camera;
         pFrame->colorImg_ = color;
@@ -62,9 +64,10 @@ int main(int argc, char** argv) {
 
         boost::timer timer;
         vo->addFrame(pFrame);
-        printf("[VO]: time used %.2f ms\n", timer.elapsed() * 100.0f);
+        printf("time used %.2f ms\n", timer.elapsed() * 100.0f);
 
-        if (vo->state_ == xslam::VisualOdometry::LOST) break;
+        if (vo->state_ == xslam::VisualOdometry::LOST)
+            break;
         SE3 Tcw = pFrame->Tcw_.inverse();
 
         // show the map and the camera pose
