@@ -1,11 +1,11 @@
 cmake_minimum_required( VERSION 2.8 )
 project ( xSLAM )
 
-set( CMAKE_CXX_COMPILER "clang++-7" )
+set( CMAKE_CXX_COMPILER "g++" )
 ## configure build
 set( CMAKE_BUILD_TYPE Debug )
 # Optimization flag, (low) O1 -> O3 (high)
-set( CMAKE_CXX_FLAGS "-std=c++11 -march=native -O3" )
+set( CMAKE_CXX_FLAGS "-std=c++14 -march=native -O3" )
 # generate compile commands
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
 
@@ -26,11 +26,16 @@ include_directories( ${Sophus_INCLUDE_DIRS} )
 # G2O
 find_package( g2o REQUIRED )
 include_directories( ${G2O_INCLUDE_DIRS} )
+set( G2O_LIBS
+    g2o_core
+    g2o_stuff
+    g2o_types_sba
+)
 
 set( THIRD_PARTY_LIBS
     ${OpenCV_LIBS}
     ${Sophus_LIBRARIES}
-    g2o_core g2o_stuff g2o_types_sba
+    ${G2O_LIBS}
 )
 
 ############### source and test ######################

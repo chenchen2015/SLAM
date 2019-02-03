@@ -8,7 +8,7 @@ Frame::Ptr Frame::createFrame() {
 }
 
 double Frame::findDepth(const cv::KeyPoint& kp) {
-    int x = cvRound(kp.pt.x);
+int x = cvRound(kp.pt.x);
     int y = cvRound(kp.pt.y);
     ushort d = depthImg_.ptr<ushort>(y)[x];
     if (d != 0) {
