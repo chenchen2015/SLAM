@@ -35,3 +35,6 @@ cmake .. -DCMAKE_BUILD_TYPE=RELEASE \
 ```
 
 When using `cmake >= 3.11`, [CMP0072 needs to be noticed](https://cmake.org/cmake/help/git-stage/policy/CMP0072.html)
+
+### AWS EC2 GPU instance setup
+FIrst, follow the [AWS tutorial on setting up NVIDIA driver](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/install-nvidia-driver.html).
