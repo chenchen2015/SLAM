@@ -73,7 +73,8 @@ sudo apt install libicu-dev -yqq
 wget https://dl.bintray.com/boostorg/release/1.69.0/source/boost_1_69_0.tar.gz
 tar -xf boost_1_69_0.tar.gz
 cd boost_*
-./bootstrap.sh
+./bootstrap.sh --prefix=/usr/local --with-icu=
+sudo ./b2 install -a -j4
 ```
 
 #### PCL
