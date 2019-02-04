@@ -36,5 +36,34 @@ cmake .. -DCMAKE_BUILD_TYPE=RELEASE \
 
 When using `cmake >= 3.11`, [CMP0072 needs to be noticed](https://cmake.org/cmake/help/git-stage/policy/CMP0072.html)
 
-### AWS EC2 GPU instance setup
-FIrst, follow the [AWS tutorial on setting up NVIDIA driver](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/install-nvidia-driver.html).
+### AWS EC2 GPU Instance Setup
+First, follow the [AWS tutorial on setting up NVIDIA driver](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/install-nvidia-driver.html).
+Then install CUDA toolkit:
+```bash
+wget https://developer.nvidia.com/compute/cuda/10.0/Prod/local_installers/cuda_10.0.130_410.48_linux
+sudo sh cuda_10.0.130_410.48_linux.run
+```
+
+### Setup Dependencies
+
+#### cmake
+```bash
+sudo apt -qq install cmake cmake-curses-gui -y
+```
+
+#### SuiteSparse
+```bash
+sudo apt -qq install libsuitesparse-dev -y
+```
+
+#### Eigen3
+```bash
+wget http://bitbucket.org/eigen/eigen/get/3.3.7.tar.gz
+tar -xf 3.3.7.tar.gz
+cd eigen*
+mkdir build
+cd build
+
+```
+
+#### OpenCV
