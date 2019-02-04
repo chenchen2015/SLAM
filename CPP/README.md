@@ -109,9 +109,21 @@ git clone https://github.com/RainerKuemmerle/g2o
 cd g2o
 mkdir build
 cd build
-cmake ..
+ccmake ..
 make -j4
 ```
+
+#### Ceres-Solver
+```bash
+sudo apt-get install libgoogle-glog-dev libatlas-base-dev libsuitesparse-dev -yq
+git clone https://ceres-solver.googlesource.com/ceres-solver
+cd ceres-solver
+mkdir build
+cd build
+ccmake ..
+sudo make install
+```
+
 
 #### Sophus
 ```bash
@@ -123,6 +135,8 @@ cmake ..
 make -j4
 sudo make install
 ```
+
+
 
 #### OpenCV
 ```bash
