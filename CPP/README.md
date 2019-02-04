@@ -56,6 +56,11 @@ sudo apt -qq install cmake cmake-curses-gui -y
 sudo apt -qq install libsuitesparse-dev -y
 ```
 
+#### g2o Dependencies
+```bash
+sudo apt -qq install qtdeclarative5-dev qt5-qmake libqglviewer-dev-qt5 -y
+```
+
 #### Eigen3
 ```bash
 wget http://bitbucket.org/eigen/eigen/get/3.3.7.tar.gz
