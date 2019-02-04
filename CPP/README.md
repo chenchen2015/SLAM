@@ -56,9 +56,15 @@ sudo apt -qq install cmake cmake-curses-gui -y
 sudo apt -qq install libsuitesparse-dev -y
 ```
 
-#### g2o Dependencies
+#### g2o
 ```bash
 sudo apt -qq install qtdeclarative5-dev qt5-qmake libqglviewer-dev-qt5 -y
+git clone https://github.com/RainerKuemmerle/g2o
+cd g2o
+mkdir build
+cd build
+cmake ..
+make -j4
 ```
 
 #### Eigen3
