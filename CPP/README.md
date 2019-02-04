@@ -63,7 +63,8 @@ tar -xf 3.3.7.tar.gz
 cd eigen*
 mkdir build
 cd build
-
+cmake .. 
+sudo make install
 ```
 
 #### OpenCV
