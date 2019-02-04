@@ -56,6 +56,17 @@ sudo apt -qq install cmake cmake-curses-gui -y
 sudo apt -qq install libsuitesparse-dev -y
 ```
 
+#### Eigen3
+```bash
+wget http://bitbucket.org/eigen/eigen/get/3.3.7.tar.gz
+tar -xf 3.3.7.tar.gz
+cd eigen*
+mkdir build
+cd build
+cmake .. 
+sudo make install
+```
+
 #### g2o
 ```bash
 sudo apt -qq install qtdeclarative5-dev qt5-qmake libqglviewer-dev-qt5 -y
@@ -67,14 +78,14 @@ cmake ..
 make -j4
 ```
 
-#### Eigen3
+#### Sophus
 ```bash
-wget http://bitbucket.org/eigen/eigen/get/3.3.7.tar.gz
-tar -xf 3.3.7.tar.gz
-cd eigen*
+git clone https://github.com/strasdat/Sophus
+cd Sophus
 mkdir build
 cd build
-cmake .. 
+cmake ..
+make -j4
 sudo make install
 ```
 
