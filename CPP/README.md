@@ -67,6 +67,25 @@ cmake ..
 sudo make install
 ```
 
+#### Boost
+```bash
+sudo apt install libicu-dev -yqq
+wget https://dl.bintray.com/boostorg/release/1.69.0/source/boost_1_69_0.tar.gz
+tar -xf boost_1_69_0.tar.gz
+cd boost_*
+./bootstrap.sh
+```
+
+#### PCL
+```bash
+sudo apt install -yqq libflann-dev
+wget https://github.com/PointCloudLibrary/pcl/archive/pcl-1.9.1.tar.gz
+tar -xf pcl-1.9.1.tar.gz
+cd pcl-pcl*
+mkdir build
+cd build
+```
+
 #### g2o
 ```bash
 sudo apt -qq install qtdeclarative5-dev qt5-qmake libqglviewer-dev-qt5 -y
