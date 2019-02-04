@@ -97,6 +97,9 @@ tar -xf pcl-1.9.1.tar.gz
 cd pcl-pcl*
 mkdir build
 cd build
+ccmake ..
+make -j4
+sudo make install
 ```
 
 #### g2o
