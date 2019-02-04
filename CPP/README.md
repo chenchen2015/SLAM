@@ -77,6 +77,18 @@ cd boost_*
 sudo ./b2 install -a -j4
 ```
 
+#### VTK
+```bash
+wget https://www.vtk.org/files/release/8.2/VTK-8.2.0.tar.gz
+tar -xf VTK-8.2.0.tar.gz
+cd VTK-8.2.0
+mkdir build
+cd build
+cmake ..
+make -j4
+sudo make install
+```
+
 #### PCL
 ```bash
 sudo apt install -yqq libflann-dev
