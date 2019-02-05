@@ -124,7 +124,6 @@ ccmake ..
 sudo make install
 ```
 
-
 #### Sophus
 ```bash
 git clone https://github.com/strasdat/Sophus
@@ -136,7 +135,19 @@ make -j4
 sudo make install
 ```
 
+#### FFMPEG
+- To enable `NVENC`, follow [these steps from ffmpeg's official docs](https://trac.ffmpeg.org/wiki/HWAccelIntro#NVENC).
+- Compile flags are recommended from [NVIDIA's website](https://developer.nvidia.com/ffmpeg)
+- plus, a not-so-perfect fix for `nvcuvid.h` header issue due to depreciated header file in post-CUDA8 versions: https://github.com/opencv/opencv/issues/9544#issuecomment-423488897
 
+```bash
+git clone https://git.videolan.org/git/ffmpeg/nv-codec-headers.git
+cd nv-codec-headers
+make
+sudo make install
+./configure --enable-cuda --enable-cuvid --enable-nvenc --enable-nonfree --enable-libnpp
+--extra-cflags="-march=native -I/usr/local/cuda/include" --extra-ldflags=-L/usr/local/cuda/lib64
+```
 
 #### OpenCV
 ```bash
