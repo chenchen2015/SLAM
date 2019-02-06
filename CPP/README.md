@@ -1,5 +1,4 @@
 ### OpenCV cmake build flags
-
 #### With CUDA
 Need to set `CUDA_NVCC_FLAGS="-ccbin gcc-6"` to use `gcc6` explicitly to compile CUDA NVCC sources since it only support up to `gcc6`.
 
