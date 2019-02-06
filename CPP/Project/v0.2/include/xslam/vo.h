@@ -25,7 +25,7 @@ class VisualOdometry {
     vector<cv::KeyPoint> keyPointsCurr_; // keypoints in current frame
     Mat descriptorsCurr_;                // descriptor in current frame
 
-    vector<MatPoint::Ptr> matchedPt3_;   // matched 3D points
+    vector<MapPoint::Ptr> matchedPt3_;   // matched 3D points
     vector<int> matchedPix2Idx_;         // index of the matched 2D pixels
     cv::FlannBasedMatcher matcherFlann_; // flann matcher
 
@@ -65,7 +65,7 @@ class VisualOdometry {
     void addMapPoints();
     bool checkEstimatedPose();
     bool checkKeyFrame();
-    inline void addMapPoint();
+    inline void addMapPoint(int i);
 
     double
     getViewAngle(Frame::Ptr pFrame, MapPoint::Ptr pPt);

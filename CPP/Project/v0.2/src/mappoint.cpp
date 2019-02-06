@@ -5,7 +5,7 @@ namespace xslam {
 
 unsigned long MapPoint::factoryId_ = 0;
 
-MapPoint(
+MapPoint::MapPoint(
     unsigned long id,
     const Vector3d &position,
     const Vector3d &norm,
@@ -14,7 +14,7 @@ MapPoint(
     : id_(id),
       pos_(position),
       norm_(norm),
-      pointValid_(true),
+      valid_(true),
       observedTimes_(0),
       matchedTimes_(0),
       descriptor_(descriptor) {
@@ -26,13 +26,13 @@ MapPoint::Ptr MapPoint::createMapPoint() {
         new MapPoint(factoryId_++, Vector3d(0, 0, 0), Vector3d(0, 0, 0)));
 }
 
-static MapPoint::Ptr createMapPoint(
+MapPoint::Ptr MapPoint::createMapPoint(
     const Vector3d &posWorld,
     const Vector3d &norm,
     const Mat &descriptor,
     Frame *pFrame) {
     return MapPoint::Ptr(
-        new MapPoint(factoryId_++, posWorld, norm, jpFrame, descriptor));
+        new MapPoint(factoryId_++, posWorld, norm, pFrame, descriptor));
 }
 
 } // namespace xslam

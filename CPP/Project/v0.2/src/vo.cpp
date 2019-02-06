@@ -127,7 +127,7 @@ void VisualOdometry::poseEstimationPnP() {
     vector<cv::Point3f> pts3d;
     vector<cv::Point2f> pts2d;
     for (int i = 0; i < matchedPt3_.size(); ++i) {
-        pts2d.push_back(keypointsCurr_[matchedPix2Idx_[i]].pt);
+        pts2d.push_back(keyPointsCurr_[matchedPix2Idx_[i]].pt);
         pts3d.push_back(matchedPt3_[i]->getPositionCV());
     }
 
@@ -199,7 +199,7 @@ void VisualOdometry::poseEstimationPnP() {
 
 void VisualOdometry::optimizeMap() {
     // remove mappoints that are not frequently seen
-    for (auto iter = map_->map_points_.begin(); iter != map_->map_points_.end();) {
+    for (auto iter = map_->mapPoints_.begin(); iter != map_->mapPoints_.end();) {
         if (!curr_->isInFrame(iter->second->pos_)) {
             // not seen in current frame
             iter = map_->mapPoints_.erase(iter);
@@ -217,7 +217,7 @@ void VisualOdometry::optimizeMap() {
             iter = map_->mapPoints_.erase(iter);
             continue;
         }
-        if (iter->second->good_ == false) {
+        if (iter->second->valid_ == false) {
             // TODO: try to triangulate this map point
         }
         ++iter;
@@ -264,13 +264,13 @@ inline void VisualOdometry::addMapPoint(int i) {
     // filter out invalid depth
     if (depth < 0)
         return;
-    Vector3d ptWorld = ref_->camera_->pixel2world(
+    Vector3d ptWorld = ref_->pCamera_->pixel2world(
         Vector2d(keyPointsCurr_[i].pt.x, keyPointsCurr_[i].pt.y),
         curr_->Tcw_, depth);
     Vector3d n = ptWorld - ref_->getCamCenter();
     n.normalize();
     MapPoint::Ptr mp = MapPoint::createMapPoint(
-        p_world, n, descriptorsCurr_.row(i).clone(), curr_.get());
+        ptWorld, n, descriptorsCurr_.row(i).clone(), curr_.get());
     map_->insertMapPoint(mp);
 }
 
@@ -300,9 +300,9 @@ void VisualOdometry::addMapPoints() {
 }
 
 double VisualOdometry::getViewAngle(Frame::Ptr pFrame, MapPoint::Ptr mp) {
-    Vector3d n = point->pos_ - frame->getCamCenter();
+    Vector3d n = mp->pos_ - pFrame->getCamCenter();
     n.normalize();
-    return acos(n.transpose() * point->norm_);
+    return acos(n.transpose() * mp->norm_);
 }
 
 } // namespace xslam

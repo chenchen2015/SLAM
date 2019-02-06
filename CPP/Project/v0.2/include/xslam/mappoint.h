@@ -15,7 +15,7 @@ class MapPoint {
     Vector3d norm_;                  // Normal of viewing direction
     Mat descriptor_;                 // Descriptor for matching
     list<Frame *> observedFrames_;   // observed frames
-    bool pointValid_;                // whether point is valid or not
+    bool valid_;                     // whether point is valid or not
     int observedTimes_;              // number of times observed by feature matching algo
     int matchedTimes_;               // number of times being an inliner in pose estimation
 
@@ -24,21 +24,15 @@ class MapPoint {
         : id_(-1),
           pos_(Vector3d(0, 0, 0)),
           norm_(Vector3d(0, 0, 0)),
-          pointValid_(true),
+          valid_(true),
           observedTimes_(0),
           matchedTimes_(0){};
     MapPoint(
         unsigned long id,
         const Vector3d &position,
         const Vector3d &norm,
-        Frame *pFrame = nullptr,
-        const Mat &descriptor = Mat())
-        : id_(id),
-          pos_(position),
-          norm_(norm),
-          pointValid_(true),
-          observedTimes_(0),
-          matchedTimes_(0);
+        Frame *pFrame,
+        const Mat &descriptor);
 
     // factory method
     static MapPoint::Ptr createMapPoint();
