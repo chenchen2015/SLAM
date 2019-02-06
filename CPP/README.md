@@ -11,7 +11,6 @@ cmake .. -DCMAKE_BUILD_TYPE=RELEASE \
     -DCUDA_FAST_MATH=ON \
     -DWITH_CUBLAS=ON \
     -DWITH_NVCUVID=ON \
-    -DCUDA_NVCC_FLAGS="-ccbin gcc-6" \
     -DWITH_V4L=ON \
     -DWITH_LIBV4L=ON \
     -DWITH_OPENGL=ON \
@@ -145,8 +144,7 @@ git clone https://git.videolan.org/git/ffmpeg/nv-codec-headers.git
 cd nv-codec-headers
 make
 sudo make install
-./configure --enable-cuda --enable-cuvid --enable-nvenc --enable-nonfree --enable-libnpp
---extra-cflags="-march=native -I/usr/local/cuda/include" --extra-ldflags=-L/usr/local/cuda/lib64
+./configure --enable-shared --enable-pic --enable-cuda --enable-cuvid --enable-nvenc --enable-nonfree --enable-libnpp --arch=x86_64 --extra-cflags=-I/usr/local/cuda/include --extra-ldflags=-L/usr/local/cuda/lib64
 ```
 
 #### OpenCV
