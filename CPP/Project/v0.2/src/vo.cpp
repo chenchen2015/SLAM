@@ -27,7 +27,7 @@ VisualOdometry::VisualOdometry()
     nMinInliers_ = Config::get<int>("min_inliers");
     nMinKeyFrameRot = Config::get<double>("keyframe_rotation");
     nMinKeyFrameTrans = Config::get<double>("keyframe_translation");
-    mappointEraseRatio_ = Config::get<double>("map_point_erase_ratio");
+    mapPointEraseRatio_ = mapPointEraseRatioDefault_ = Config::get<double>("map_point_erase_ratio");
     // create ORB feature extractor
     orb_ = cv::ORB::create(nFeatures_, scaleFactor_, nPyramidLevel_);
 }
@@ -88,9 +88,22 @@ void VisualOdometry::computeDescriptors() {
 }
 
 void VisualOdometry::featureMatching() {
-    // match desp_ref and desp_curr, use OpenCV's brute force match
     vector<cv::DMatch> matches;
-    matcherFlann_.match(descriptorsRef_, descriptorsCurr_, matches);
+    // go through candidate mappoints in the map
+    Mat candDesc;
+    vector<MapPoint::Ptr> candidate;
+    for (auto &allPts : map_->mapPoints_) {
+        MapPoint::Ptr &mp = allPts.second;
+        // check if p in curr frame image
+        if (curr_->isInFrame(mp->pos_)) {
+            // new candidate
+            mp->observedTimes_++;
+            candidate.push_back(mp);
+            candDesc.push_back(mp->descriptor_);
+        }
+    }
+    // match candidate with current descriptors
+    matcherFlann_.match(candDesc, descriptorsCurr_, matches);
     // select the best matches
     float minDist =
         std::min_element(matches.begin(), matches.end(),
@@ -98,41 +111,26 @@ void VisualOdometry::featureMatching() {
                              return m1.distance < m2.distance;
                          })
             ->distance;
-
-    featureMatches_.clear();
+    matchedPt3_.clear();
+    matchedPix2Idx_.clear();
     for (cv::DMatch &m : matches) {
         if (m.distance < max<float>(minDist * matchRatio_, 30.0)) {
-            featureMatches_.push_back(m);
+            matchedPt3_.push_back(candidate[m.queryIdx]);
+            matchedPix2Idx_.push_back(m.trainIdx);
         }
     }
-    printf("[VO]: found %ld good matches, ", featureMatches_.size());
-}
-
-void VisualOdometry::setRef3DPoints() {
-    // select the features with depth measurements
-    pts3dRef_.clear();
-    descriptorsRef_ = Mat();
-    for (size_t i = 0; i < keyPointsCurr_.size(); i++) {
-        double d = ref_->findDepth(keyPointsCurr_[i]);
-        if (d > 0) {
-            Vector3d ptCam = ref_->pCamera_->pixel2camera(
-                Vector2d(keyPointsCurr_[i].pt.x, keyPointsCurr_[i].pt.y), d);
-            pts3dRef_.push_back(
-                cv::Point3f(ptCam(0, 0), ptCam(1, 0), ptCam(2, 0)));
-            descriptorsRef_.push_back(descriptorsCurr_.row(i));
-        }
-    }
+    printf("[VO]: found %ld good matches, ", matchedPt3_.size());
 }
 
 void VisualOdometry::poseEstimationPnP() {
     // construct the 3d 2d observations
     vector<cv::Point3f> pts3d;
     vector<cv::Point2f> pts2d;
-
-    for (const auto &m : featureMatches_) {
-        pts3d.push_back(pts3dRef_[m.queryIdx]);
-        pts2d.push_back(keyPointsCurr_[m.trainIdx].pt);
+    for (int i = 0; i < matchedPt3_.size(); ++i) {
+        pts2d.push_back(keypointsCurr_[matchedPix2Idx_[i]].pt);
+        pts3d.push_back(matchedPt3_[i]->getPositionCV());
     }
+
     Mat rvec, tvec, inliers;
     cv::solvePnPRansac(pts3d, pts2d, ref_->pCamera_->K, Mat(), rvec, tvec,
                        false, 100, 4.0, 0.99, inliers);
@@ -188,6 +186,8 @@ void VisualOdometry::poseEstimationPnP() {
         pEdge->setMeasurement(Vector2d(pts2d[index].x, pts2d[index].y));
         pEdge->setInformation(Eigen::Matrix2d::Identity());
         optimizer.addEdge(pEdge);
+        // increment matched times count
+        matchedPt3_[index]->matchedTimes_++;
     }
     // start optimization
     optimizer.initializeOptimization();
@@ -195,6 +195,42 @@ void VisualOdometry::poseEstimationPnP() {
     // update current best
     TcrHat_ =
         SE3(pPose->estimate().rotation(), pPose->estimate().translation());
+}
+
+void VisualOdometry::optimizeMap() {
+    // remove mappoints that are not frequently seen
+    for (auto iter = map_->map_points_.begin(); iter != map_->map_points_.end();) {
+        if (!curr_->isInFrame(iter->second->pos_)) {
+            // not seen in current frame
+            iter = map_->mapPoints_.erase(iter);
+            continue;
+        }
+        // check match ratio of current point
+        float matchRatio = float(iter->second->matchedTimes_) / iter->second->observedTimes_;
+        if (matchRatio < mapPointEraseRatio_) {
+            iter = map_->mapPoints_.erase(iter);
+            continue;
+        }
+        // view angle too large -> point close to the boundary
+        double angle = getViewAngle(curr_, iter->second);
+        if (angle > M_PI / 6.) {
+            iter = map_->mapPoints_.erase(iter);
+            continue;
+        }
+        if (iter->second->good_ == false) {
+            // TODO: try to triangulate this map point
+        }
+        ++iter;
+    }
+    // append new map points if we see only a few matched points
+    if (matchedPix2Idx_.size() < 100)
+        addMapPoints();
+    if (map_->mapPoints_.size() > 1000) {
+        // TODO: map is too large, remove some points
+        mapPointEraseRatio_ += 0.05;
+    } else
+        mapPointEraseRatio_ = mapPointEraseRatioDefault_; //switch back to default
+    cout << "[VO]: current map size: " << map_->mapPoints_.size() << endl;
 }
 
 bool VisualOdometry::checkEstimatedPose() {
@@ -223,9 +259,50 @@ bool VisualOdometry::checkKeyFrame() {
     return false;
 }
 
+inline void VisualOdometry::addMapPoint(int i) {
+    double depth = ref_->findDepth(keyPointsCurr_[i]);
+    // filter out invalid depth
+    if (depth < 0)
+        return;
+    Vector3d ptWorld = ref_->camera_->pixel2world(
+        Vector2d(keyPointsCurr_[i].pt.x, keyPointsCurr_[i].pt.y),
+        curr_->Tcw_, depth);
+    Vector3d n = ptWorld - ref_->getCamCenter();
+    n.normalize();
+    MapPoint::Ptr mp = MapPoint::createMapPoint(
+        p_world, n, descriptorsCurr_.row(i).clone(), curr_.get());
+    map_->insertMapPoint(mp);
+}
+
 void VisualOdometry::addKeyFrame() {
     cout << "[VO]: adding a keyframe" << endl;
+    if (map_->keyframes_.empty()) {
+        // first keyframe, add all 3d points into map
+        for (size_t i = 0; i < keyPointsCurr_.size(); ++i) {
+            addMapPoint(i);
+        }
+    }
     map_->insertKeyFrame(curr_);
+    // update reference frame
+    ref_ = curr_;
+}
+
+void VisualOdometry::addMapPoints() {
+    // append new map points to map
+    vector<bool> matched(keyPointsCurr_.size(), false);
+    for (int index : matchedPix2Idx_)
+        matched[index] = true;
+    for (int i = 0; i < keyPointsCurr_.size(); ++i) {
+        if (matched[i])
+            continue;
+        addMapPoint(i);
+    }
+}
+
+double VisualOdometry::getViewAngle(Frame::Ptr pFrame, MapPoint::Ptr mp) {
+    Vector3d n = point->pos_ - frame->getCamCenter();
+    n.normalize();
+    return acos(n.transpose() * point->norm_);
 }
 
 } // namespace xslam

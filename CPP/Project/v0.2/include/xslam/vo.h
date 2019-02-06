@@ -25,7 +25,7 @@ class VisualOdometry {
     vector<cv::KeyPoint> keyPointsCurr_; // keypoints in current frame
     Mat descriptorsCurr_;                // descriptor in current frame
 
-    vector<MatPoint::Ptr> matchedPt3;    // matched 3D points
+    vector<MatPoint::Ptr> matchedPt3_;   // matched 3D points
     vector<int> matchedPix2Idx_;         // index of the matched 2D pixels
     cv::FlannBasedMatcher matcherFlann_; // flann matcher
 
@@ -41,9 +41,10 @@ class VisualOdometry {
     int nMaxLost_;       // max number of continuous lost times
     int nMinInliers_;    // minimum inliers
 
-    double nMinKeyFrameRot;     // minimal rotation of two key-frames
-    double nMinKeyFrameTrans;   // minimal translation of two key-frames
-    double mappointEraseRatio_; // portions of map points to remove
+    double nMinKeyFrameRot;            // minimal rotation of two key-frames
+    double nMinKeyFrameTrans;          // minimal translation of two key-frames
+    double mapPointEraseRatio_;        // portions of map points to remove
+    double mapPointEraseRatioDefault_; // default portions of map points to remove
 
   public:
     // constructor and destructor
@@ -64,8 +65,10 @@ class VisualOdometry {
     void addMapPoints();
     bool checkEstimatedPose();
     bool checkKeyFrame();
+    inline void addMapPoint();
 
-    double getViewAngle(Frame::Ptr pFrame, MapPoint::Ptr pPt);
+    double
+    getViewAngle(Frame::Ptr pFrame, MapPoint::Ptr pPt);
 };
 
 } // namespace xslam
