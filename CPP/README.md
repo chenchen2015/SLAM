@@ -145,7 +145,7 @@ git clone https://git.videolan.org/git/ffmpeg/nv-codec-headers.git
 cd nv-codec-headers
 make
 sudo make install
-./configure --enable-shared --enable-cuda --enable-cuvid --enable-nvenc --enable-nonfree --enable-libnpp --extra-cflags="-march=native -I/usr/local/cuda/include" --extra-ldflags=-L/usr/local/cuda/lib64
+./configure --enable-shared --enable-pic --enable-cuda --enable-cuvid --enable-nvenc --enable-nonfree --enable-libnpp --arch=x86_64 --extra-cflags=-I/usr/local/cuda/include --extra-ldflags=-L/usr/local/cuda/lib64
 ```
 
 #### OpenCV
