@@ -3,7 +3,7 @@
 namespace xslam {
 
 void Map::insertKeyFrame(Frame::Ptr frame) {
-    cout << "Key frame size = " << keyframes_.size() << endl;
+    printf("%1ld key frames, ", keyframes_.size());
     if (keyframes_.find(frame->id_) == keyframes_.end()) {
         keyframes_.insert({frame->id_, frame});
     } else {
@@ -19,4 +19,4 @@ void Map::insertMapPoint(MapPoint::Ptr mp) {
     }
 }
 
-}  // namespace xslam
+} // namespace xslam

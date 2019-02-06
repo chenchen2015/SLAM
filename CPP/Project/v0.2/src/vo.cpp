@@ -119,7 +119,7 @@ void VisualOdometry::featureMatching() {
             matchedPix2Idx_.push_back(m.trainIdx);
         }
     }
-    printf("[VO]: found %ld good matches, ", matchedPt3_.size());
+    printf("[VO]: found %3ld good matches, ", matchedPt3_.size());
 }
 
 void VisualOdometry::poseEstimationPnP() {
@@ -135,7 +135,7 @@ void VisualOdometry::poseEstimationPnP() {
     cv::solvePnPRansac(pts3d, pts2d, ref_->pCamera_->K, Mat(), rvec, tvec,
                        false, 100, 4.0, 0.99, inliers);
     nInliers_ = inliers.rows;
-    printf("%d inliers, ", nInliers_);
+    printf("%3d inliers, ", nInliers_);
     // since SO3 no longer has the constructor from rotation vector
     // in newer template based Sophus library
     // there are generally two methods to pass the rotation
@@ -230,7 +230,7 @@ void VisualOdometry::optimizeMap() {
         mapPointEraseRatio_ += 0.05;
     } else
         mapPointEraseRatio_ = mapPointEraseRatioDefault_; //switch back to default
-    cout << "[VO]: current map size: " << map_->mapPoints_.size() << endl;
+    printf("%4ld map points, ", map_->mapPoints_.size());
 }
 
 bool VisualOdometry::checkEstimatedPose() {
@@ -275,7 +275,6 @@ inline void VisualOdometry::addMapPoint(int i) {
 }
 
 void VisualOdometry::addKeyFrame() {
-    cout << "[VO]: adding a keyframe" << endl;
     if (map_->keyframes_.empty()) {
         // first keyframe, add all 3d points into map
         for (size_t i = 0; i < keyPointsCurr_.size(); ++i) {
