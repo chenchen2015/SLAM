@@ -5,6 +5,7 @@
 // OpenCV
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/viz.hpp>
 // xSLAM
 #include "xslam/config.h"
@@ -80,9 +81,15 @@ int main(int argc, char **argv) {
                 Tcw.rotationMatrix()(2, 2)),
             cv::Affine3d::Vec3(Tcw.translation()(0, 0), Tcw.translation()(1, 0),
                                Tcw.translation()(2, 0)));
-
-        cv::imshow("image", color);
-        cv::waitKey(10);
+        // show ORB features
+        Mat featImg = color.clone();
+        for (auto &pt : vo->map_->mapPoints_) {
+            xslam::MapPoint::Ptr p = pt.second;
+            Vector2d pixel = pFrame->pCamera_->world2pixel(p->pos_, pFrame->Tcw_);
+            cv::circle(featImg, cv::Point2f(pixel(0, 0), pixel(1, 0)), 5, cv::Scalar(0, 255, 0), 2);
+        }
+        cv::imshow("image", featImg);
+        cv::waitKey(5);
         vis.setWidgetPose("Camera", M);
         vis.spinOnce(1, false);
     }
