@@ -28,6 +28,7 @@ VisualOdometry::VisualOdometry()
     nMinKeyFrameRot = Config::get<double>("keyframe_rotation");
     nMinKeyFrameTrans = Config::get<double>("keyframe_translation");
     mappointEraseRatio_ = Config::get<double>("map_point_erase_ratio");
+    // create ORB feature extractor
     orb_ = cv::ORB::create(nFeatures_, scaleFactor_, nPyramidLevel_);
 }
 
@@ -36,25 +37,24 @@ bool VisualOdometry::addFrame(Frame::Ptr frame) {
     case INITIALIZING: {
         state_ = OK;
         curr_ = ref_ = frame;
-        map_->insertKeyFrame(frame);
         // extract features from first frame
         extractKeyPoints();
         computeDescriptors();
-        // compute the 3d position of features in ref frame
-        setRef3DPoints();
+        // set the first frame as the keyframe
+        addKeyFrame();
         break;
     }
     case OK: {
         curr_ = frame;
+        curr_->Tcw_ = ref_->Tcw_;
         extractKeyPoints();
         computeDescriptors();
         featureMatching();
         poseEstimationPnP();
-        if (checkEstimatedPose()) // a good estimation
+        if (checkEstimatedPose()) // validate if this is a good pose
         {
-            curr_->Tcw_ = TcrHat_ * ref_->Tcw_; // Tcw = Tcr * Trw
-            ref_ = curr_;
-            setRef3DPoints();
+            curr_->Tcw_ = TcrHat_; // Tcw = Tcr * Trw
+            optimizeMap();
             nLost_ = 0;
             if (checkKeyFrame()) // is a key-frame
             {

@@ -22,12 +22,12 @@ class VisualOdometry {
     Frame::Ptr curr_; // current frame
 
     cv::Ptr<cv::ORB> orb_;               // orb detector and computer
-    vector<cv::Point3f> pts3dRef_;       // 3d points in reference frame
     vector<cv::KeyPoint> keyPointsCurr_; // keypoints in current frame
     Mat descriptorsCurr_;                // descriptor in current frame
-    Mat descriptorsRef_;                 // descriptor in reference frame
+
+    vector<MatPoint::Ptr> matchedPt3;    // matched 3D points
+    vector<int> matchedPix2Idx_;         // index of the matched 2D pixels
     cv::FlannBasedMatcher matcherFlann_; // flann matcher
-    vector<cv::DMatch> featureMatches_;
 
     SE3 TcrHat_;   // the estimated pose of current frame
     int nInliers_; // number of inlier features in icp
@@ -58,11 +58,14 @@ class VisualOdometry {
     void computeDescriptors();
     void featureMatching();
     void poseEstimationPnP();
-    void setRef3DPoints();
+    void optimizeMap();
 
     void addKeyFrame();
+    void addMapPoints();
     bool checkEstimatedPose();
     bool checkKeyFrame();
+
+    double getViewAngle(Frame::Ptr pFrame, MapPoint::Ptr pPt);
 };
 
 } // namespace xslam
