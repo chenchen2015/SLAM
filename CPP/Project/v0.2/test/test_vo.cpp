@@ -45,7 +45,6 @@ int main(int argc, char **argv) {
     cv::Affine3d camPose =
         cv::viz::makeCameraPose(camPos, camFocalPoint, camYDir);
     vis.setViewerPose(camPose);
-
     worldCoordSys.setRenderingProperty(cv::viz::LINE_WIDTH, 2.0);
     cameraCoordSys.setRenderingProperty(cv::viz::LINE_WIDTH, 1.0);
     vis.showWidget("World", worldCoordSys);
