@@ -49,6 +49,19 @@ sudo sh cuda_10.0.130_410.48_linux.run
 sudo apt -qq install cmake cmake-curses-gui -y
 ```
 
+#### Curl
+Build curl from source to enable `SSL` support for `https`
+```bash
+wget https://curl.haxx.se/download/curl-7.64.0.tar.gz
+tar -xf curl-7.64.0.tar.gz
+cd curl-7.64.0
+mkdir build
+cd build
+./configure --with-ssl
+make -j4
+sudo make install
+```
+
 #### SuiteSparse
 ```bash
 sudo apt -qq install libsuitesparse-dev -y
