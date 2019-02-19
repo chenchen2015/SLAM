@@ -32,6 +32,13 @@ cmake .. -DCMAKE_BUILD_TYPE=RELEASE \
 
 When using `cmake >= 3.11`, [CMP0072 needs to be noticed](https://cmake.org/cmake/help/git-stage/policy/CMP0072.html)
 
+Sometimes, `curl` might fail due to `https` not supported. This seems to have caused by `cmake`'s own `curl` was not built with `https` support. Hence, we need to pass an additional flag when building `cmake` to use `curl` that we built on our own with `https` supported by passing: `--system-curl`:
+```bash
+# bootstrap cmake build
+./bootstrap --system-curl
+```
+This is detailed in [this Stackoverflow answer](https://stackoverflow.com/a/33512778)
+
 ### AWS EC2 GPU Instance Setup
 First, follow the [AWS tutorial on setting up NVIDIA driver](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/install-nvidia-driver.html).
 Then install CUDA toolkit:
