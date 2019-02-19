@@ -152,5 +152,5 @@ git clone https://github.com/opencv/opencv
 git clone https://github.com/opencv/opencv_contrib
 sudo add-apt-repository "deb http://security.ubuntu.com/ubuntu xenial-security main"
 sudo apt install build-essential pkg-config libavcodec-dev libavformat-dev libswscale-dev -yq 
-sudo apt install python-dev python-numpy libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libjasper1 libjasper-dev libdc1394-22-dev -yq
+sudo apt install python3-dev python3-numpy libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libjasper1 libjasper-dev libdc1394-22-dev -yq
 ```
