@@ -49,6 +49,22 @@ sudo sh cuda_10.0.130_410.48_linux.run
 
 ### Setup Dependencies
 
+#### LLVM and Clang 7
+```bash
+wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+sudo add-apt-repository "deb http://apt.llvm.org/cosmic/ llvm-toolchain-cosmic main"
+```
+Go with full install
+```bash
+sudo apt-get install libllvm-7-ocaml-dev libllvm7 llvm-7 llvm-7-dev llvm-7-doc llvm-7-examples llvm-7-runtime
+sudo apt-get install clang-7 clang-tools-7 clang-7-doc libclang-common-7-dev libclang-7-dev libclang1-7 clang-format-7 python-clang-7
+sudo apt-get install libfuzzer-7-dev lldb-7 lld-7 libc++-7-dev libc++abi-7-dev libomp-7-dev
+```
+or just essentials
+```bash
+sudo apt install clang-7 clang-format-7 libc++-7-dev python-clang-7
+```
+
 #### cmake
 ```bash
 sudo apt -qq install cmake cmake-curses-gui -y
