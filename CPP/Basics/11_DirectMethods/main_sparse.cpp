@@ -27,7 +27,7 @@ using namespace g2o;
 
 #define CV_WAIT cv::waitKey(0)
 constexpr char cCvWindow[] = "OpenCV Basics";
-const string dataPath = "../../data/rgbd_dataset_freiburg1_desk";
+const string dataPath = "../../../data/rgbd_dataset_freiburg1_desk";
 enum SLAM_ERROR { ERR_FILE_NOT_EXIST = -1, ERR_TRACKING_FAIL_ALL_KEYPOINT_LOST = -2 };
 
 // helper function for drawing keypoints in std::list

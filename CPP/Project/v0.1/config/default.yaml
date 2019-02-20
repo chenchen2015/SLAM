@@ -1,6 +1,6 @@
 %YAML 1.2
 # TUM dataset directory
-dataset_dir: ../../../Basics/data/rgbd_dataset_freiburg1_desk/
+dataset_dir: ../../../data/rgbd_dataset_freiburg1_desk/
 
 # camera intrinsics
 # fr1
