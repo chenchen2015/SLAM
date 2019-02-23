@@ -126,7 +126,7 @@ sudo make install
 
 #### PCL
 ```bash
-sudo apt install -yqq libflann-dev
+sudo apt install -yqq libflann-dev libpng-dev libglew-dev
 wget https://github.com/PointCloudLibrary/pcl/archive/pcl-1.9.1.tar.gz
 tar -xf pcl-1.9.1.tar.gz
 cd pcl-pcl*
