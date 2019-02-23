@@ -72,9 +72,9 @@ sudo apt -qq install cmake cmake-curses-gui -y
 
 #### Curl
 Build curl from source to enable `SSL` support for `https`
-First, get `OpenSSL`
+First, get `OpenSSL` and `nghttp2`
 ```bash
-sudo apt-get install libssl-dev
+sudo apt-get install libssl-dev nghttp2
 ```
 then compile `curl` with `SSL` enabled.
 ```bash
