@@ -181,9 +181,18 @@ cd nv-codec-headers
 make
 sudo make install
 ```
-Then clone and build `ffmpeg` with the following condiguration
+Then clone and build `ffmpeg` with the following configuration
 ```bash
-./configure --enable-shared --enable-pic --enable-cuda --enable-cuvid --enable-nvenc --enable-nonfree --enable-libnpp --arch=x86_64 --extra-cflags=-I/usr/local/cuda/include --extra-ldflags=-L/usr/local/cuda/lib64
+./configure --enable-shared \
+    --enable-pic \
+    --enable-cuda \
+    --enable-cuvid \
+    --enable-nvenc \
+    --enable-nonfree \
+    --enable-libnpp \
+    --arch=x86_64 \
+    --extra-cflags=-I/usr/local/cuda/include \
+    --extra-ldflags=-L/usr/local/cuda/lib64
 ```
 
 #### OpenCV
