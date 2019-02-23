@@ -85,6 +85,7 @@ cd curl-7.64.0
 make -j4
 sudo make install
 ```
+After that, rebuild `cmake` to use system's `curl` we just built.
 
 #### SuiteSparse
 ```bash
