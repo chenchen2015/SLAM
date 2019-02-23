@@ -72,6 +72,11 @@ sudo apt -qq install cmake cmake-curses-gui -y
 
 #### Curl
 Build curl from source to enable `SSL` support for `https`
+First, get `OpenSSL`
+```bash
+sudo apt-get install libssl-dev
+```
+then compile `curl` with `SSL` enabled.
 ```bash
 wget https://curl.haxx.se/download/curl-7.64.0.tar.gz
 tar -xf curl-7.64.0.tar.gz
