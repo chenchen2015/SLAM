@@ -103,10 +103,16 @@ make -j8
 sudo make install
 ```
 
-
 #### SuiteSparse
 ```bash
 sudo apt -qq install libsuitesparse-dev -y
+```
+
+#### CUDA 10
+After installation, update path:
+```bash
+echo 'export PATH="$PATH:/usr/local/cuda-10.0/bin"' >> ~/.bashrc
+echo 'export LD_LIBRARY_PATH="/usr/local/cuda-10.0/lib64:$LD_LIBRARY_PATH"' >> ~/.bashrc
 ```
 
 #### Eigen3
