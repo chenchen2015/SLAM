@@ -103,9 +103,9 @@ make -j8
 sudo make install
 ```
 
-#### SuiteSparse
+#### SuiteSparse and SuperLU
 ```bash
-sudo apt -qq install libsuitesparse-dev -y
+sudo apt install libsuitesparse-dev libsuperlu-dev -y -qq
 ```
 
 #### CUDA 10
