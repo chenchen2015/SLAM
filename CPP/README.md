@@ -142,7 +142,8 @@ sudo ./b2 install -a -j4
 ```
 
 #### VTK
-```bash
+```bashc
+sudo apt install libqt5x11extras5-dev -y -qq
 wget https://www.vtk.org/files/release/8.2/VTK-8.2.0.tar.gz
 tar -xf VTK-8.2.0.tar.gz
 cd VTK-8.2.0
