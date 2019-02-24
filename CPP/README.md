@@ -65,9 +65,23 @@ or just essentials
 sudo apt install clang-7 clang-format-7 libc++-7-dev python-clang-7
 ```
 
-#### cmake
+#### Axel
+for faster download, use `axel`
 ```bash
-sudo apt -qq install cmake cmake-curses-gui -y
+sudo apt install axel -y -qq
+```
+
+#### cmake
+dependencies
+```bash
+sudo apt install libncurses5-dev -y -qq
+```
+and build `cmake`
+```bash
+axel -an 8 https://github.com/Kitware/CMake/releases/download/v3.13.4/cmake-3.13.4.tar.gz
+tar -xf cmake*
+cd cmake-3.13.4
+
 ```
 
 #### Curl
