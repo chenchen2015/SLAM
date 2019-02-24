@@ -71,35 +71,38 @@ for faster download, use `axel`
 sudo apt install axel -y -qq
 ```
 
-#### cmake
-dependencies
-```bash
-sudo apt install libncurses5-dev -y -qq
-```
-and build `cmake`
-```bash
-axel -an 8 https://github.com/Kitware/CMake/releases/download/v3.13.4/cmake-3.13.4.tar.gz
-tar -xf cmake*
-cd cmake-3.13.4
-
-```
-
 #### Curl
 Build curl from source to enable `SSL` support for `https`
 First, get `OpenSSL` and `nghttp2`
 ```bash
-sudo apt-get install libssl-dev nghttp2
+sudo apt-get install libssl-dev nghttp2 zlib1g-dev
 ```
 then compile `curl` with `SSL` enabled.
 ```bash
 wget https://curl.haxx.se/download/curl-7.64.0.tar.gz
 tar -xf curl-7.64.0.tar.gz
 cd curl-7.64.0
-./configure --with-ssl --with-nghttp2
+./configure --with-ssl --with-nghttp2 --with-zlib
 make -j4
 sudo make install
 ```
-After that, rebuild `cmake` to use system's `curl` we just built.
+After that, build/rebuild `cmake` to use system's `curl` we just built.
+
+#### cmake
+dependencies
+```bash
+sudo apt install libncurses5-dev ccache qt5-default qtbase5-dev qttools5-dev -y -qq
+```
+and build `cmake`, enabling `cmake-gui` and the system curl distribution we just built (with `https` protocol enabled)
+```bash
+axel -an 8 https://github.com/Kitware/CMake/releases/download/v3.13.4/cmake-3.13.4.tar.gz
+tar -xf cmake*
+cd cmake-3.13.4
+./configure --qt-gui --system-curl --parallel=8
+make -j8
+sudo make install
+```
+
 
 #### SuiteSparse
 ```bash
