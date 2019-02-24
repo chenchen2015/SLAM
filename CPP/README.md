@@ -242,6 +242,8 @@ sudo apt-get update -qq && sudo apt-get -y install \
 Then clone and build `ffmpeg` with the following configuration
 
 ```bash
+git clone --depth=1 https://git.ffmpeg.org/ffmpeg.git ffmpeg
+cd ffmpeg
 ./configure --enable-shared \
     --enable-pic \
     --enable-cuda \
@@ -252,6 +254,8 @@ Then clone and build `ffmpeg` with the following configuration
     --arch=x86_64 \
     --extra-cflags=-I/usr/local/cuda/include \
     --extra-ldflags=-L/usr/local/cuda/lib64
+make -j8
+sudo make install
 ```
 
 #### OpenCV
