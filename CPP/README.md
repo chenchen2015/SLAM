@@ -115,6 +115,11 @@ echo 'export PATH="$PATH:/usr/local/cuda-10.0/bin"' >> ~/.bashrc
 echo 'export LD_LIBRARY_PATH="/usr/local/cuda-10.0/lib64:$LD_LIBRARY_PATH"' >> ~/.bashrc
 ```
 
+#### OpenGL dependencies
+```bash
+sudo apt install freeglut3-dev libglew-dev -y -qq
+```
+
 #### Eigen3
 ```bash
 wget http://bitbucket.org/eigen/eigen/get/3.3.7.tar.gz
