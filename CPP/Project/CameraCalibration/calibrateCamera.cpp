@@ -47,6 +47,9 @@ bool processCalibrateImage(const string &filename,
   // https://docs.opencv.org/4.0.1/d9/d0c/group__calib3d.html#ga93efa9b0aa890de240ca32b11253dd4a
   vector<Point2f> corners;
   // new candidate to try findChessboardCornersSB
+  // bool valid =
+  //     findChessboardCornersSB(image, patternSize, corners,
+  //     CALIB_CB_EXHAUSTIVE);
   bool valid =
       findChessboardCorners(image, patternSize, corners, chessboardFlags);
   if (!valid) {
