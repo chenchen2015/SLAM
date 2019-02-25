@@ -14,5 +14,6 @@ find_package( OpenCV REQUIRED )
 include_directories( ${OpenCV_DIRS} )
 
 add_executable( calibrateCamera calibrateCamera.cpp )
+add_executable( calibrateCameraTBB calibrateCameraParallelTBB.cpp )
 # link OpenCV
 target_link_libraries( calibrateCamera ${OpenCV_LIBS} )
