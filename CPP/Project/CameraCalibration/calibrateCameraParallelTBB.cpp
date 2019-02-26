@@ -101,15 +101,17 @@ double computeReprojectionErrors(const vector<vector<Point3f>> &patternPoints,
     size_t totalPoints = 0;
     double totalErr = 0, err;
     perViewErrors.resize(patternPoints.size());
-    for (size_t i = 0; i < patternPoints.size(); ++i) {
-        projectPoints(patternPoints[i], rvecs[i], tvecs[i], cameraMatrix,
-                      distCoeffs, imagePoints2);
-        err = norm(imagePoints[i], imagePoints2, NORM_L2);
-        size_t n = patternPoints[i].size();
-        perViewErrors[i] = (float)std::sqrt(err * err / n);
-        totalErr += err * err;
-        totalPoints += n;
-    }
+    parallel_for_(Range(0, patternPoints.size()), [&](const Range &range) {
+        for (int i = range.start; i < range.end; ++i) {
+            projectPoints(patternPoints[i], rvecs[i], tvecs[i], cameraMatrix,
+                          distCoeffs, imagePoints2);
+            err = norm(imagePoints[i], imagePoints2, NORM_L2);
+            size_t n = patternPoints[i].size();
+            perViewErrors[i] = (float)std::sqrt(err * err / n);
+            totalErr += err * err;
+            totalPoints += n;
+        }
+    });
     return std::sqrt(totalErr / totalPoints);
 }
 
@@ -131,7 +133,7 @@ int main(int argc, char **argv) {
     // in C++11 fashion
     // example:
     // https://github.com/opencv/opencv/blob/master/samples/cpp/tutorial_code/core/how_to_use_OpenCV_parallel_for_/how_to_use_OpenCV_parallel_for_.cpp#L108
-    setNumThreads(4);
+    // setNumThreads(8);
     parallel_for_(Range(0, images.size()), [&](const Range &range) {
         for (int i = range.start; i < range.end; ++i) {
             processCalibrateImage(images[i], imgCorners);
@@ -149,7 +151,8 @@ int main(int argc, char **argv) {
         CALIB_USE_LU); // CALIB_TILTED_MODEL,
                        // CALIB_THIN_PRISM_MODEL,
                        // CALIB_RATIONAL_MODEL
-                       // | CALIB_TILTED_MODEL | CALIB_RATIONAL_MODEL | CALIB_THIN_PRISM_MODEL
+                       // | CALIB_TILTED_MODEL | CALIB_RATIONAL_MODEL |
+                       // CALIB_THIN_PRISM_MODEL
 
     logMsg("RMS error reported by calibrateCamera %g", rms);
     // evaluate reprojection error
