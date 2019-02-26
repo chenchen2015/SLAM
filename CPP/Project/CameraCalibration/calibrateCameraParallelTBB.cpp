@@ -113,6 +113,8 @@ double computeReprojectionErrors(const vector<vector<Point3f>> &patternPoints,
     return std::sqrt(totalErr / totalPoints);
 }
 
+// TODO: add distortion removal
+
 int main(int argc, char **argv) {
     // get input image list
     vector<string> images;
@@ -122,11 +124,14 @@ int main(int argc, char **argv) {
     vector<vector<Point2f>> imgCorners;
     vector<vector<Point3f>> patternCorners;
     calcChessboardCorners(20, images.size(), patternCorners);
+    patternCorners[0][boardW - 1].x =
+        patternCorners[0][0].x + (20 * (boardW - 1));
+    patternCorners.resize(patternCorners.size(), patternCorners[0]);
     // use parallel (need to compile OpenCV with TBB)
     // in C++11 fashion
     // example:
     // https://github.com/opencv/opencv/blob/master/samples/cpp/tutorial_code/core/how_to_use_OpenCV_parallel_for_/how_to_use_OpenCV_parallel_for_.cpp#L108
-    setNumThreads(8);
+    setNumThreads(4);
     parallel_for_(Range(0, images.size()), [&](const Range &range) {
         for (int i = range.start; i < range.end; ++i) {
             processCalibrateImage(images[i], imgCorners);
@@ -136,13 +141,16 @@ int main(int argc, char **argv) {
     Mat distCoeffs = Mat::zeros(8, 1, CV_64F);
     Mat cameraMatrix = Mat::eye(3, 3, CV_64F);
     vector<Mat> rVecs, tVecs;
-    vector<Point3f> newObjPoints;
+    vector<Point3f> newObjPoints = patternCorners[0];
     double rms;
     rms = calibrateCameraRO(
-        patternCorners, imgCorners, patternSize, -1, cameraMatrix, distCoeffs,
-        rVecs, tVecs, newObjPoints,
-        CALIB_USE_LU | CALIB_TILTED_MODEL | CALIB_RATIONAL_MODEL |
-            CALIB_THIN_PRISM_MODEL); // CALIB_TILTED_MODEL, CALIB_THIN_PRISM_MODEL
+        patternCorners, imgCorners, patternSize, boardW - 1, cameraMatrix,
+        distCoeffs, rVecs, tVecs, newObjPoints,
+        CALIB_USE_LU); // CALIB_TILTED_MODEL,
+                       // CALIB_THIN_PRISM_MODEL,
+                       // CALIB_RATIONAL_MODEL
+                       // | CALIB_TILTED_MODEL | CALIB_RATIONAL_MODEL | CALIB_THIN_PRISM_MODEL
+
     logMsg("RMS error reported by calibrateCamera %g", rms);
     // evaluate reprojection error
     vector<float> perViewErrors;
