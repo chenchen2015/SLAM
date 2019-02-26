@@ -18,7 +18,7 @@ constexpr int chessboardFlags = CALIB_CB_ADAPTIVE_THRESH |
                                 /*CALIB_CB_NORMALIZE_IMAGE |*/
                                 CALIB_CB_FAST_CHECK;
 Size patternSize(boardW, boardH); // board corner count
-TermCriteria termCriteria(TermCriteria::EPS + TermCriteria::COUNT, 30,
+TermCriteria termCriteria(TermCriteria::EPS + TermCriteria::COUNT, 50,
                           0.000001);
 
 // log function
@@ -64,7 +64,7 @@ bool processCalibrateImage(const string &filename,
     // [Optional] use cornerSubPix to refine the detected corders
     if (useSubPix) {
         // Mat gray;
-        cornerSubPix(image, corners, Size(7, 7), Size(3, 3), termCriteria);
+        cornerSubPix(image, corners, Size(31, 31), Size(-1, -1), termCriteria);
     }
     imgCorners.push_back(corners);
     // [Optional] visuzlize

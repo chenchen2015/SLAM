@@ -17,3 +17,4 @@ add_executable( calibrateCamera calibrateCamera.cpp )
 add_executable( calibrateCameraTBB calibrateCameraParallelTBB.cpp )
 # link OpenCV
 target_link_libraries( calibrateCamera ${OpenCV_LIBS} )
+target_link_libraries( calibrateCameraTBB ${OpenCV_LIBS} )

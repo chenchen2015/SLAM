@@ -18,12 +18,12 @@ constexpr int chessboardFlags = CALIB_CB_ADAPTIVE_THRESH |
                                 /*CALIB_CB_NORMALIZE_IMAGE |*/
                                 CALIB_CB_FAST_CHECK;
 Size patternSize(boardW, boardH); // board corner count
-TermCriteria termCriteria(TermCriteria::EPS + TermCriteria::COUNT, 30,
-                          0.000001);
+TermCriteria termCriteria(TermCriteria::EPS + TermCriteria::COUNT, 50,
+                          0.0000001);
 
 // log function
 template <typename... Args>
-void logMsg(const char *fmt, Args... args) {
+inline void logMsg(const char *fmt, Args... args) {
     printf("[Camera Calibration]: ");
     printf(fmt, args...);
     printf("\n");
@@ -32,7 +32,7 @@ void logMsg(const char *fmt, Args... args) {
 // process a single image to extract corners
 bool processCalibrateImage(const string &filename,
                            vector<vector<Point2f>> &imgCorners,
-                           bool useSubPix = true, bool visualize = true) {
+                           bool useSubPix = true, bool visualize = false) {
     logMsg("processing %s", filename.c_str());
     // load image
     Mat image;
@@ -64,7 +64,7 @@ bool processCalibrateImage(const string &filename,
     // [Optional] use cornerSubPix to refine the detected corders
     if (useSubPix) {
         // Mat gray;
-        cornerSubPix(image, corners, Size(7, 7), Size(3, 3), termCriteria);
+        cornerSubPix(image, corners, Size(11, 11), Size(-1, -1), termCriteria);
     }
     imgCorners.push_back(corners);
     // [Optional] visuzlize
@@ -126,6 +126,7 @@ int main(int argc, char **argv) {
     // in C++11 fashion
     // example:
     // https://github.com/opencv/opencv/blob/master/samples/cpp/tutorial_code/core/how_to_use_OpenCV_parallel_for_/how_to_use_OpenCV_parallel_for_.cpp#L108
+    setNumThreads(8);
     parallel_for_(Range(0, images.size()), [&](const Range &range) {
         for (int i = range.start; i < range.end; ++i) {
             processCalibrateImage(images[i], imgCorners);
@@ -137,9 +138,11 @@ int main(int argc, char **argv) {
     vector<Mat> rVecs, tVecs;
     vector<Point3f> newObjPoints;
     double rms;
-    rms = calibrateCameraRO(patternCorners, imgCorners, patternSize, -1,
-                            cameraMatrix, distCoeffs, rVecs, tVecs, newObjPoints,
-                            CALIB_USE_LU | CALIB_TILTED_MODEL);
+    rms = calibrateCameraRO(
+        patternCorners, imgCorners, patternSize, -1, cameraMatrix, distCoeffs,
+        rVecs, tVecs, newObjPoints,
+        CALIB_USE_LU | CALIB_TILTED_MODEL | CALIB_RATIONAL_MODEL |
+            CALIB_THIN_PRISM_MODEL); // CALIB_TILTED_MODEL, CALIB_THIN_PRISM_MODEL
     logMsg("RMS error reported by calibrateCamera %g", rms);
     // evaluate reprojection error
     vector<float> perViewErrors;
