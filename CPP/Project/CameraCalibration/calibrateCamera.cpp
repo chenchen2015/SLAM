@@ -99,7 +99,7 @@ bool processCalibrateImage(const string &filename,
         params.maxThreshold = 200;
         params.filterByArea = true;
         params.minArea = 1e3;
-        params.maxArea = 5e6;
+        params.maxArea = 5e9;
         params.filterByCircularity = true;
         params.minCircularity = 0.1f;
         params.filterByInertia = true;
