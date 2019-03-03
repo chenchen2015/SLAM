@@ -95,15 +95,17 @@ bool processCalibrateImage(const string &filename,
         // detect circle grid centers
         // https://docs.opencv.org/4.0.1/d9/d0c/group__calib3d.html#ga7f02cd21c8352142890190227628fa80
         SimpleBlobDetector::Params params;
+        params.minThreshold = 100;
+        params.maxThreshold = 200;
         params.filterByArea = true;
         params.minArea = 1e3;
         params.maxArea = 5e6;
         params.filterByCircularity = true;
-        params.minCircularity = 0.5f;
+        params.minCircularity = 0.1f;
         params.filterByInertia = true;
-        params.minInertiaRatio = 0.5f;
+        params.minInertiaRatio = 0.1f;
         params.filterByConvexity = true;
-        params.minConvexity = 0.6f;
+        params.minConvexity = 0.85f;
         valid =
             findCirclesGrid(image, pImgData->patternSize, pts2d, pImgData->flags,
                             SimpleBlobDetector::create(params));
