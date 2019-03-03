@@ -67,12 +67,13 @@ bool processCalibrateImage(const string &filename,
     // [Optional] downsample image for faster processing
     // resize(image, image, Size(), 0.25, 0.25);
     vector<Point2f> pts2d;
+    bool valid;
     switch (pImgData->patternType) {
     case CalibrationPatternType::CHESSBOARD_PATTERN:
         // detect chessboard corners
         // https://docs.opencv.org/4.0.1/d9/d0c/group__calib3d.html#ga93efa9b0aa890de240ca32b11253dd4a
-        bool valid = findChessboardCorners(image, pImgData->patternSize, pts2d,
-                                           pImgData->flags);
+        valid = findChessboardCorners(image, pImgData->patternSize, pts2d,
+                                      pImgData->flags);
         if (!valid) {
             logMsg("%s", "feature point detection failed!");
             return false;
@@ -90,9 +91,26 @@ bool processCalibrateImage(const string &filename,
             CV_WAIT;
         }
         break;
-        //case CalibrationPatternType::CIRCLE_PATTERN:
+    case CalibrationPatternType::CIRCLE_PATTERN:
+        // detect chessboard corners
+        // https://docs.opencv.org/4.0.1/d9/d0c/group__calib3d.html#ga93efa9b0aa890de240ca32b11253dd4a
+        valid =
+            findCirclesGrid(image, pImgData->patternSize, pts2d, pImgData->flags);
+        if (!valid) {
+            logMsg("%s", "feature point detection failed!");
+            return false;
+        }
+        logMsg("found %ld feature points", pts2d.size());
+        imgPts.push_back(pts2d);
+        // [Optional] visuzlize
+        if (visualize) {
+            drawChessboardCorners(image, pImgData->patternSize, Mat(pts2d), valid);
+            // show image with detected feature points
+            namedWindow(cvMainWindow, WINDOW_NORMAL);
+            imshow(cvMainWindow, image);
+            CV_WAIT;
+        }
     }
-
     return true;
 }
 
@@ -107,13 +125,19 @@ void calcRefPatternPts(CalibrationSrcImgData *pImgData, int imgCnt,
             for (int j = 0; j < pImgData->patternSize.width; j++)
                 pt3d.push_back(Point3f(float(j * pImgData->refSize),
                                        float(i * pImgData->refSize), 0));
-        patternPts = vector<vector<Point3f>>(imgCnt, pt3d);
-        patternPts[0][pImgData->patternSize.width - 1].x =
-            patternPts[0][0].x +
-            (pImgData->refSize * (pImgData->patternSize.width - 1));
-        patternPts.resize(patternPts.size(), patternPts[0]);
+        break;
+    case CalibrationPatternType::CIRCLE_PATTERN:
+        for (int i = 0; i < pImgData->patternSize.height; i++)
+            for (int j = 0; j < pImgData->patternSize.width; j++)
+                pt3d.push_back(Point3f((2 * j + i % 2) * pImgData->refSize,
+                                       i * pImgData->refSize, 0));
         break;
     }
+    patternPts = vector<vector<Point3f>>(imgCnt, pt3d);
+    patternPts[0][pImgData->patternSize.width - 1].x =
+        patternPts[0][0].x +
+        (pImgData->refSize * (pImgData->patternSize.width - 1));
+    patternPts.resize(patternPts.size(), patternPts[0]);
 }
 
 // compute reprojection error
@@ -153,24 +177,25 @@ double computeReprojectionErrors(const vector<vector<Point3f>> &patternPoints,
 // }
 
 int main(int argc, char **argv) {
-    CalibrationSrcImgData *pImgData = &chessboardDataset;
+    // CalibrationSrcImgData *pImgData = &chessboardDataset;
+    CalibrationSrcImgData *pImgData = &circleGridDataset;
     // get input image list
     vector<string> images;
-    glob("../SamsungS8Plus/Chessboard1/*.jpg", images);
+    glob(pImgData->srcPath, images);
     logMsg("found %ld images for calibration", images.size());
     // extract corner points
     vector<vector<Point2f>> imgPts;
     vector<vector<Point3f>> patternPts;
     calcRefPatternPts(pImgData, images.size(), patternPts);
-
     // use parallel (need to compile OpenCV with TBB)
     // in C++11 fashion
     // example:
     // https://github.com/opencv/opencv/blob/master/samples/cpp/tutorial_code/core/how_to_use_OpenCV_parallel_for_/how_to_use_OpenCV_parallel_for_.cpp#L108
     // setNumThreads(8);
+    bool visualize = argv[1] == "1";
     parallel_for_(Range(0, images.size()), [&](const Range &range) {
         for (int i = range.start; i < range.end; ++i) {
-            processCalibrateImage(images[i], pImgData, imgPts);
+            processCalibrateImage(images[i], pImgData, imgPts, visualize);
         }
     });
     // initialize output data container
@@ -183,11 +208,12 @@ int main(int argc, char **argv) {
         patternPts, imgPts, pImgData->patternSize,
         pImgData->patternSize.width - 1, cameraMatrix, distCoeffs, rVecs, tVecs,
         newObjPts,
-        CALIB_USE_LU); // CALIB_TILTED_MODEL,
-                       // CALIB_THIN_PRISM_MODEL,
-                       // CALIB_RATIONAL_MODEL
-                       // | CALIB_TILTED_MODEL | CALIB_RATIONAL_MODEL |
-                       // CALIB_THIN_PRISM_MODEL
+        CALIB_USE_LU |
+            CALIB_FIX_K3); // CALIB_TILTED_MODEL,
+                           // CALIB_THIN_PRISM_MODEL,
+                           // CALIB_RATIONAL_MODEL
+                           // | CALIB_TILTED_MODEL | CALIB_RATIONAL_MODEL |
+                           // CALIB_THIN_PRISM_MODEL
     logMsg("RMS error reported by calibrateCamera %g", rms);
     // evaluate reprojection error
     vector<float> perViewErrors;
