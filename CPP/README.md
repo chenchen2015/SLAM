@@ -91,7 +91,7 @@ After that, build/rebuild `cmake` to use system's `curl` we just built.
 #### cmake
 dependencies
 ```bash
-sudo apt install libncurses5-dev ccache qt5-default qtbase5-dev qttools5-dev -y -qq
+sudo apt install libncurses5-dev ccache qt5-default qtbase5-dev qttools5-dev libqt5x11extras5-dev -y -qq
 ```
 and build `cmake`, enabling `cmake-gui` and the system curl distribution we just built (with `https` protocol enabled)
 ```bash
