@@ -1,62 +1,128 @@
-#include "opencv2/highgui.hpp"
 #include <iostream>
 #include <opencv2/calib3d/calib3d.hpp>
+#include <opencv2/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <pthread.h>
 #include <string>
 #include <vector>
 using namespace cv;
 using std::cout;
 using std::string;
 using std::vector;
-const int alpha_slider_max = 100;
-int alpha_slider;
-double alpha;
-double beta;
+
 Mat src;
 Mat imgShow;
+vector<string> images;
 vector<Point2f> pts2d;
 SimpleBlobDetector::Params params;
-constexpr char *mainWindow = "Blob Detector Tweak";
+const char *mainWindow = "Blob Detector Tweak";
+const char *buttonName = "Detect";
+pthread_mutex_t mtxButton;
 
-static void on_trackbar(int, void *) {
-  params.minThreshold = 100;
-  params.maxThreshold = 200;
-  params.filterByArea = true;
-  params.minArea = 1e3;
-  params.maxArea = 5e9;
-  params.filterByCircularity = true;
-  params.minCircularity = 0.1f;
-  params.filterByInertia = true;
-  params.minInertiaRatio = 0.1f;
-  params.filterByConvexity = true;
-  params.minConvexity = float(alpha_slider) / float(alpha_slider_max); // 0.85f;
-  bool valid =
-      findCirclesGrid(src, Size(4, 11), pts2d, CALIB_CB_ASYMMETRIC_GRID,
-                      SimpleBlobDetector::create(params));
-  imgShow = src.clone();
-  drawChessboardCorners(imgShow, Size(4, 11), Mat(pts2d), valid);
-  // show image with detected feature points
-  printf("Rerunning with %.3f, valid = %s\n", params.minConvexity,
-         valid ? "yes" : "no");
-  namedWindow("image", WINDOW_NORMAL);
-  imshow("image", imgShow);
+const int SliderFloatMax = 100;
+int sliderFloatData = 0;
+int sliderImageData = 0;
+int sliderMinConvexity = 0;
+int sliderMinThreshold = 0;
+int sliderMaxThreshold = 0;
+
+void detectBlob() {
+    // do detection and redrawing
+    bool valid =
+        findCirclesGrid(src, Size(4, 11), pts2d, CALIB_CB_ASYMMETRIC_GRID,
+                        SimpleBlobDetector::create(params));
+    if (valid)
+        printf("Success: found %ld feature points\n", pts2d.size());
+    else
+        printf("Failed: %ld feature points\n", pts2d.size());
+    imgShow = src.clone();
+    drawChessboardCorners(imgShow, Size(4, 11), Mat(pts2d), valid);
+    // namedWindow("image", WINDOW_NORMAL);
+    imshow(mainWindow, imgShow);
+}
+
+static void trackbarImageCallback(int, void *) {
+    src = imread(images[sliderFloatData]);
+    if (src.empty())
+        cout << "Error loading src \n";
+    printf("Loaded %s\n", images[sliderFloatData].c_str());
+
+    detectBlob();
+}
+
+static void trackbarFloatCallback(int, void *data) {
+    float *floatData = static_cast<float *>(data);
+    *floatData = float(sliderFloatData) / float(SliderFloatMax);
+    printf("%.3f\n", *floatData);
+
+    detectBlob();
+}
+
+static void trackbarIntCallback(int, void *data) {
+    float *floatData = static_cast<float *>(data);
+    *floatData = float(sliderFloatData);
+    printf("%.3f\n", *floatData);
+
+    detectBlob();
+}
+
+static void trackbarAreaCallback(int, void *data) {
+    float *floatData = static_cast<float *>(data);
+    *floatData = float(sliderFloatData);
+    printf("%.3f\n", *floatData);
+
+    detectBlob();
+}
+
+static void buttonCallback(int state, void *userdata) {
+    std::cout << "@my_button_cb" << std::endl;
+    detectBlob();
+}
+
+static void createTrackBar(const char *s, float *data,
+                           void (*callback)(int, void *),
+                           const int maxVal = 100) {
+    char TrackbarName[50];
+    sprintf(TrackbarName, "%s %d", s, maxVal);
+    createTrackbar(TrackbarName, mainWindow, &sliderFloatData, maxVal, callback,
+                   data);
 }
 
 int main(void) {
-  vector<string> images;
-  glob("../SamsungS8Plus/CirclePattern1/*.jpg", images);
-  src = imread(images[0]);
-  if (src.empty()) {
-    cout << "Error loading src \n";
-    return -1;
-  }
-  alpha_slider = 0;
-  namedWindow(mainWindow, WINDOW_AUTOSIZE); // Create Window
-  char TrackbarName[50];
-  sprintf(TrackbarName, "minConvexity %d", alpha_slider_max);
-  createTrackbar(TrackbarName, mainWindow, &alpha_slider, alpha_slider_max,
-                 on_trackbar);
-  on_trackbar(alpha_slider, 0);
-  waitKey(0);
-  return 0;
+    // default parameters
+    params.minThreshold = 100;
+    params.maxThreshold = 200;
+    params.filterByArea = true;
+    params.minArea = 1e3;
+    params.maxArea = 5e9;
+    params.filterByCircularity = true;
+    params.minCircularity = 0.1f;
+    params.filterByInertia = true;
+    params.minInertiaRatio = 0.1f;
+    params.filterByConvexity = true;
+    params.minConvexity = 0.85f;
+    glob("../SamsungS8Plus/CirclePattern1/*.jpg", images);
+    src = imread(images[0]);
+    if (src.empty()) {
+        cout << "Error loading src \n";
+        return -1;
+    }
+    namedWindow(mainWindow, WINDOW_GUI_EXPANDED); // Create Window
+    createButton(buttonName, buttonCallback, nullptr, QT_PUSH_BUTTON, true);
+    createTrackBar("Image", nullptr, trackbarImageCallback, images.size());
+
+    createTrackBar("minArea", &params.minArea, trackbarAreaCallback, 5000);
+    createTrackBar("maxArea", &params.maxArea, trackbarAreaCallback, INT_MAX);
+    createTrackBar("minConvexity", &params.minConvexity, trackbarFloatCallback);
+    createTrackBar("minInertiaRatio", &params.minInertiaRatio,
+                   trackbarFloatCallback);
+    createTrackBar("minCircularity", &params.minCircularity,
+                   trackbarFloatCallback);
+    createTrackBar("minThreshold", &params.minThreshold, trackbarIntCallback,
+                   255);
+    createTrackBar("maxThreshold", &params.maxThreshold, trackbarIntCallback,
+                   255);
+
+    waitKey(0);
+    return 0;
 }
