@@ -15,6 +15,8 @@ include_directories( ${OpenCV_DIRS} )
 
 add_executable( calibrateCamera calibrateCamera.cpp )
 add_executable( calibrateCameraTBB calibrateCameraParallelTBB.cpp )
+add_executable( blobDetectorTweak blobDetectorTweak.cpp )
 # link OpenCV
 target_link_libraries( calibrateCamera ${OpenCV_LIBS} )
 target_link_libraries( calibrateCameraTBB ${OpenCV_LIBS} )
+target_link_libraries( blobDetectorTweak ${OpenCV_LIBS} )
