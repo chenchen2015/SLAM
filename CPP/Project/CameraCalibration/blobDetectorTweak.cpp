@@ -27,15 +27,18 @@ int sliderMinThreshold = 0;
 int sliderMaxThreshold = 0;
 
 void detectBlob() {
+    // perform additional spatial domain image pre-processing
+    threshold(src, imgShow, 127, 255, THRESH_TOZERO); // set low pixel to zero
     // do detection and redrawing
     bool valid =
-        findCirclesGrid(src, Size(4, 11), pts2d, CALIB_CB_ASYMMETRIC_GRID,
+        findCirclesGrid(imgShow, Size(4, 11), pts2d, CALIB_CB_ASYMMETRIC_GRID,
                         SimpleBlobDetector::create(params));
     if (valid)
         printf("Success: found %ld feature points\n", pts2d.size());
     else
         printf("Failed: %ld feature points\n", pts2d.size());
-    imgShow = src.clone();
+
+    // draw detected corners
     drawChessboardCorners(imgShow, Size(4, 11), Mat(pts2d), valid);
     // namedWindow("image", WINDOW_NORMAL);
     imshow(mainWindow, imgShow);
@@ -111,6 +114,7 @@ int main(void) {
     createButton(buttonName, buttonCallback, nullptr, QT_PUSH_BUTTON, true);
     createTrackBar("Image", nullptr, trackbarImageCallback, images.size());
 
+    // create sliders for parameters
     createTrackBar("minArea", &params.minArea, trackbarAreaCallback, 5000);
     createTrackBar("maxArea", &params.maxArea, trackbarAreaCallback, INT_MAX);
     createTrackBar("minConvexity", &params.minConvexity, trackbarFloatCallback);
