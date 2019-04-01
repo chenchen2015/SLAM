@@ -21,14 +21,12 @@ pthread_mutex_t mtxButton;
 
 const int SliderFloatMax = 100;
 int sliderFloatData = 0;
-int sliderImageData = 0;
-int sliderMinConvexity = 0;
-int sliderMinThreshold = 0;
-int sliderMaxThreshold = 0;
+float imageThresh = 127;
 
 void detectBlob() {
     // perform additional spatial domain image pre-processing
-    threshold(src, imgShow, 127, 255, THRESH_TOZERO); // set low pixel to zero
+    threshold(src, imgShow, int(imageThresh), 255,
+              THRESH_TOZERO); // set low pixel to zero
     // do detection and redrawing
     bool valid =
         findCirclesGrid(imgShow, Size(4, 11), pts2d, CALIB_CB_ASYMMETRIC_GRID,
@@ -122,6 +120,7 @@ int main(void) {
                    trackbarFloatCallback);
     createTrackBar("minCircularity", &params.minCircularity,
                    trackbarFloatCallback);
+    createTrackBar("imageThreshold", &imageThresh, trackbarIntCallback, 255);
     createTrackBar("minThreshold", &params.minThreshold, trackbarIntCallback,
                    255);
     createTrackBar("maxThreshold", &params.maxThreshold, trackbarIntCallback,
